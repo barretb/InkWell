@@ -69,6 +69,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
+- [ ] T010 [P] Implement local-first storage architecture (platform storage, encryption)
+- [ ] T011 [P] Setup data privacy and consent tracking framework
+- [ ] T012 [P] Configure accessibility (a11y) testing tools and WCAG 2.1 AA validation
+- [ ] T013 [P] Setup unit, integration, and acceptance test infrastructure (REQUIRED per Constitution)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -80,23 +84,29 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 (MANDATORY - required for EVERY user story) ⚠️
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> **NOTE: Tests are NOT optional—Constitution v1.1.0 mandates tests for every feature**
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T014 [P] [US1] Unit tests for [component] in tests/unit/test_[name].cs
+- [ ] T015 [P] [US1] Contract/API tests for [endpoint] in tests/contract/test_[name].cs
+- [ ] T016 [P] [US1] Integration tests for [user journey] in tests/integration/test_[name].cs
+- [ ] T017 [P] [US1] Accessibility tests (WCAG 2.1 AA compliance) in tests/a11y/test_[name].cs
+- [ ] T018 [P] [US1] Privacy tests (user consent, data handling) in tests/privacy/test_[name].cs
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T019 [P] [US1] Create [Entity1] model in src/models/[entity1].cs
+- [ ] T020 [P] [US1] Create [Entity2] model in src/models/[entity2].cs
+- [ ] T021 [US1] Implement [Service] in src/services/[service].cs (depends on T019, T020)
+- [ ] T022 [US1] Implement [feature/page] in src/[location]/[file].xaml.cs
+- [ ] T023 [US1] Add validation and error handling
+- [ ] T024 [US1] Add logging for user story 1 operations
+- [ ] T025 [US1] Verify WCAG 2.1 AA accessibility compliance
+- [ ] T026 [US1] Verify data privacy and consent mechanisms
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+**Checkpoint**: At this point, User Story 1 should be fully functional, testable, accessible, and privacy-compliant
 
 ---
 
@@ -106,17 +116,22 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2 (MANDATORY - required for EVERY user story) ⚠️
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T027 [P] [US2] Unit tests for [component] in tests/unit/test_[name].cs
+- [ ] T028 [P] [US2] Contract/API tests for [endpoint] in tests/contract/test_[name].cs
+- [ ] T029 [P] [US2] Integration tests for [user journey] in tests/integration/test_[name].cs
+- [ ] T030 [P] [US2] Accessibility tests (WCAG 2.1 AA compliance) in tests/a11y/test_[name].cs
+- [ ] T031 [P] [US2] Privacy tests (user consent, data handling) in tests/privacy/test_[name].cs
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T032 [P] [US2] Create [Entity] model in src/models/[entity].cs
+- [ ] T033 [US2] Implement [Service] in src/services/[service].cs
+- [ ] T034 [US2] Implement [feature/page] in src/[location]/[file].xaml.cs
+- [ ] T035 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T036 [US2] Verify WCAG 2.1 AA accessibility compliance
+- [ ] T037 [US2] Verify data privacy and consent mechanisms
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 

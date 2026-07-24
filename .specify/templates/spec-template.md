@@ -78,6 +78,79 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+## Data Privacy & User Consent *(mandatory)*
+
+<!--
+  ACTION REQUIRED: The content in this section represents required privacy governance.
+  All features MUST address user consent and data handling per Constitution v1.1.0.
+-->
+
+### User Consent Strategy
+
+- What user data does this feature collect, create, or access?
+- What explicit user consent is required before data is collected or transferred?
+- How will users understand and control their data? (see Data Controls below)
+
+### Data Handling
+
+- Where is user data stored? (local device is PRIMARY; cloud is optional and requires explicit opt-in)
+- How is data encrypted at rest and in transit?
+- What data, if any, may leave the device? (MUST require explicit user consent)
+- Manuscripts and user content MUST remain private—nothing leaves the device without consent
+
+### Data Controls
+
+- Users MUST have ability to view all their data collected by this feature
+- Users MUST have ability to export their data
+- Users MUST have ability to delete all data this feature creates
+
+## Storage & Offline Design *(mandatory)*
+
+<!--
+  ACTION REQUIRED: All features MUST support local-first storage per Constitution v1.1.0.
+  Define the storage architecture and offline capability.
+-->
+
+### Local-First Storage
+
+- Primary data storage mechanism (e.g., local SQLite, files, platform-native storage)
+- All critical functionality MUST work offline—no feature blocked by lack of connectivity
+- How data is structured for efficient local querying and synchronization
+
+### Cloud Sync (if applicable)
+
+- [ ] Not applicable—feature is offline-only
+- [ ] Optional cloud sync offered (describe architecture and opt-in mechanism)
+- Cloud sync MUST be truly optional and never required for core functionality
+- Users opt-in explicitly; default is local-only
+
+## Accessibility Requirements *(mandatory)*
+
+<!--
+  ACTION REQUIRED: WCAG 2.1 AA compliance is mandatory per Constitution v1.1.0.
+-->
+
+### WCAG 2.1 AA Compliance
+
+- All UI elements MUST meet WCAG 2.1 AA standards (not AA, not AAA unless required)
+- Color contrast ratios, keyboard navigation, screen reader support MUST be designed in
+- Accessibility testing MUST be part of acceptance criteria for every user story
+
+## Testing Requirements *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Tests are required for EVERY feature per Constitution v1.1.0.
+  Define testing strategy across unit, integration, and acceptance levels.
+-->
+
+### Testing Strategy
+
+- Unit tests for business logic (required: one or more per component)
+- Integration tests for feature workflows (required: at least one per user story)
+- Accessibility tests to verify WCAG 2.1 AA compliance
+- Privacy tests to verify data handling and consent mechanisms
+- Performance tests (if performance requirements are specified)
+
 ## Requirements *(mandatory)*
 
 <!--

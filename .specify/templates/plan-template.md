@@ -40,7 +40,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+This feature MUST comply with the InkWell Constitution v1.1.0. Mandatory gates:
+
+- [ ] **Clean Architecture**: Feature design demonstrates clear separation of concerns
+- [ ] **Test-Driven**: Tests planned for EVERY feature component (no exceptions)
+- [ ] **WCAG 2.1 AA**: All UI elements planned with WCAG 2.1 AA compliance target
+- [ ] **\.NET Stack**: Implementation planned using .NET 10 and MAUI
+- [ ] **Performance**: Response times defined (<16ms target for UI, no blocking operations)
+- [ ] **Documentation**: Documentation plan includes code comments, README, user help
+- [ ] **PR Workflow**: Feature branch strategy and code review process defined
+- [ ] **Data Privacy**: User consent and data handling approach documented
+- [ ] **Storage**: Local-first storage architecture defined; cloud sync (if any) is optional
 
 ## Project Structure
 
