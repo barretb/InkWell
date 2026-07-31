@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:dtos="clr-namespace:InkWell.Application.Abstractions.Dtos;assembly=InkWell.Application"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.ManuscriptPage"
+             x:DataType="vm:ManuscriptViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="20" RowSpacing="14">
+
+        <Label Grid.Row="0"
+               Style="{StaticResource HeadingLabel}"
+               Text="{Binding Title}"
+               SemanticProperties.HeadingLevel="Level1" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <Entry Grid.Column="0"
+                   Text="{Binding NewChapterTitle}"
+                   Placeholder="Title of a new chapter"
+                   ReturnCommand="{Binding AddChapterCommand}"
+                   SemanticProperties.Description="Title of a new chapter" />
+            <Button Grid.Column="1" Text="Add chapter" Command="{Binding AddChapterCommand}" />
+            <Button Grid.Column="2"
+                    Text="Daily goal"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding OpenGoalsCommand}"
+                    SemanticProperties.Hint="Set a daily word-count goal and see your writing history" />
+        </Grid>
+
+        <VerticalStackLayout Grid.Row="2" IsVisible="{Binding IsEmpty}" Spacing="8" VerticalOptions="Center">
+            <Label Style="{StaticResource EmptyStateLabel}" Text="This manuscript has no chapters yet." />
+            <Label Style="{StaticResource EmptyStateLabel}"
+                   Text="Name your first chapter above and choose Add chapter to start writing." />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding Chapters}"
+                        IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="dtos:ChapterSummary">
+                    <Border Padding="12" Margin="0,0,0,8" StrokeShape="RoundRectangle 8">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label FontFamily="OpenSansSemibold" FontSize="16">
+                                    <Label.Text>
+                                        <MultiBinding StringFormat="{}{0}. {1}">
+                                            <Binding Path="OrderIndex" />
+                                            <Binding Path="Title" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                                <Label Style="{StaticResource SecondaryLabel}"
+                                       Text="{Binding WordCount, StringFormat='{0:N0} words'}" />
+                            </VerticalStackLayout>
+
+                            <!--
+                                Move buttons rather than drag-only reordering: the full drafting
+                                workflow, reordering included, must be operable by keyboard
+                                (FR-019, SC-007).
+                            -->
+                            <Button Grid.Column="1"
+                                    Text="↑"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ManuscriptViewModel}}, Path=MoveChapterUpCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Description="Move chapter earlier" />
+
+                            <Button Grid.Column="2"
+                                    Text="↓"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ManuscriptViewModel}}, Path=MoveChapterDownCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Description="Move chapter later" />
+
+                            <Button Grid.Column="3"
+                                    Text="Write"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ManuscriptViewModel}}, Path=OpenChapterCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Opens this chapter in the editor" />
+
+                            <Button Grid.Column="4"
+                                    Text="Delete"
+                                    Style="{StaticResource DangerButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ManuscriptViewModel}}, Path=DeleteChapterCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Deletes this chapter after asking you to confirm" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Label Grid.Row="3"
+               Style="{StaticResource StatusLabel}"
+               Text="{Binding StatusMessage}"
+               SemanticProperties.Description="{Binding StatusMessage}" />
+    </Grid>
+</ContentPage>

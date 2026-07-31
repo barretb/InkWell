@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/InkWell.Application/InkWell.Application.csproj" />
+    <Project Path="src/InkWell.Domain/InkWell.Domain.csproj" />
+    <Project Path="src/InkWell.Infrastructure/InkWell.Infrastructure.csproj" />
+    <Project Path="src/InkWell.Maui/InkWell.Maui.csproj" />
+    <Project Path="src/InkWell.Presentation/InkWell.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InkWell.Application.Tests/InkWell.Application.Tests.csproj" />
+    <Project Path="tests/InkWell.Domain.Tests/InkWell.Domain.Tests.csproj" />
+    <Project Path="tests/InkWell.Infrastructure.Tests/InkWell.Infrastructure.Tests.csproj" />
+    <Project Path="tests/InkWell.Maui.UiTests/InkWell.Maui.UiTests.csproj" />
+  </Folder>
+</Solution>

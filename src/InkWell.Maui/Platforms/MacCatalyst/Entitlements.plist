@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <!--
+        InkWell is offline-only (FR-006, SC-002) and nothing leaves the device except a
+        user-initiated export (FR-017), so the network client entitlement is deliberately NOT
+        granted. Only two entitlements are required:
+          * Keychain Sharing  — MAUI SecureStorage stores the SQLCipher database key here. Missing
+            this entitlement is the #1 cause of `MissingEntitlement` on iOS/Mac Catalyst.
+          * User-selected read/write — lets the sandboxed app write EPUB/PDF exports to the folder
+            the writer picks in the save dialog, and nowhere else.
+    -->
+    <dict>
+        <!-- App Sandbox must be enabled to distribute a Mac Catalyst app through the Mac App Store. -->
+        <key>com.apple.security.app-sandbox</key>
+        <true/>
+
+        <!-- Required by SecureStorage (SQLCipher key storage). -->
+        <key>keychain-access-groups</key>
+        <array>
+            <string>$(AppIdentifierPrefix)com.inkwell.app</string>
+        </array>
+
+        <!-- The only outbound path: writing an export to a location the user chose (FR-017, FR-018). -->
+        <key>com.apple.security.files.user-selected.read-write</key>
+        <true/>
+    </dict>
+</plist>

@@ -1,0 +1,23 @@
+{
+  "name": "inkwell-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CodeMirror 6 build workspace for the InkWell chapter editor. Authored sources live in ../Resources/Raw/wwwroot; this workspace only supplies dependencies and the bundler.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.8.1",
+    "@codemirror/lang-markdown": "^6.3.4",
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.6",
+    "@lezer/highlight": "^1.2.1",
+    "@lezer/markdown": "^1.4.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
+}

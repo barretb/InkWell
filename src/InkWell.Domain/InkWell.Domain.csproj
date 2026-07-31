@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>InkWell.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Markdig is the only dependency the domain layer takes. It is pure managed IL with no MAUI,
+      platform, or native dependency, so it does not compromise the plan.md rule that Domain and
+      Application stay device-independent and unit-testable without a device. `ProseWordCounter`
+      needs a real markdown AST to exclude syntax tokens and image markers from prose counts
+      (FR-009, SC-005); re-implementing a markdown parser inside the domain would be far worse.
+    -->
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
+</Project>

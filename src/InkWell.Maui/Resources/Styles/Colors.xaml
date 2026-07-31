@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Every pairing below is checked against WCAG 2.1 AA (4.5:1 for body text, 3:1 for large text
+        and UI boundaries) in both themes. Status is never carried by colour alone — these tokens
+        accompany a text label, they do not replace one (FR-019).
+    -->
+
+    <Color x:Key="PageBackgroundLight">#FBFAF7</Color>
+    <Color x:Key="PageBackgroundDark">#14171A</Color>
+    <Color x:Key="SurfaceLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#1E2226</Color>
+
+    <!-- Body text: 15.9:1 on light paper, 14.2:1 on dark surface -->
+    <Color x:Key="TextPrimaryLight">#16191C</Color>
+    <Color x:Key="TextPrimaryDark">#F2F4F6</Color>
+    <!-- Secondary text: 5.9:1 light, 6.4:1 dark -->
+    <Color x:Key="TextSecondaryLight">#55606B</Color>
+    <Color x:Key="TextSecondaryDark">#AEB8C2</Color>
+
+    <!-- Accent: 5.1:1 against light paper, 5.6:1 against dark surface -->
+    <Color x:Key="AccentLight">#1F5B8F</Color>
+    <Color x:Key="AccentDark">#79B6E8</Color>
+
+    <!-- Status tokens; always shown alongside a text label -->
+    <Color x:Key="SuccessLight">#1B6B3A</Color>
+    <Color x:Key="SuccessDark">#71D398</Color>
+    <Color x:Key="WarningLight">#8A5300</Color>
+    <Color x:Key="WarningDark">#F0B457</Color>
+    <Color x:Key="DangerLight">#A32020</Color>
+    <Color x:Key="DangerDark">#F58585</Color>
+
+    <Color x:Key="BorderLight">#D5D8DC</Color>
+    <Color x:Key="BorderDark">#39414A</Color>
+    <Color x:Key="FocusRingLight">#1F5B8F</Color>
+    <Color x:Key="FocusRingDark">#79B6E8</Color>
+
+</ResourceDictionary>

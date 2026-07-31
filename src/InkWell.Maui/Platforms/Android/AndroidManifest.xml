@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<!--
+		InkWell requests NO network permissions. Every capability works offline (FR-006, SC-002)
+		and nothing leaves the device except a user-initiated export (FR-017); omitting INTERNET
+		makes that guarantee enforceable by the platform rather than only by code.
+
+		`allowBackup` is false so the encrypted database is never copied into Google backup, where
+		it could be restored onto a device whose Keystore no longer holds the matching SQLCipher
+		key (research.md §2, "key loss = data loss").
+	-->
+	<application android:allowBackup="false" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
+
+	<!-- Needed only on API < 33 to write an export to a user-chosen location (FR-018). -->
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+</manifest>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>InkWell.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InkWell.Application\InkWell.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Encrypted local store — see the single-bundle rule in Directory.Packages.props">
+    <PackageReference Include="sqlite-net-sqlcipher" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" />
+  </ItemGroup>
+
+  <ItemGroup Label="Markdown and export">
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="PDFsharp" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
+  </ItemGroup>
+
+</Project>

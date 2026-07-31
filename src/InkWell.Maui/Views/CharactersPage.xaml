@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.CharactersPage"
+             x:DataType="vm:CharactersViewModel"
+             Title="Characters">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="20" RowSpacing="14">
+
+        <Label Grid.Row="0"
+               Style="{StaticResource HeadingLabel}"
+               Text="Characters"
+               SemanticProperties.HeadingLevel="Level1" />
+
+        <VerticalStackLayout Grid.Row="1" Spacing="8">
+            <Entry Text="{Binding NewName}"
+                   Placeholder="Name"
+                   SemanticProperties.Description="Name of a new character" />
+            <Editor Text="{Binding NewNotes}"
+                    Placeholder="Notes — anything you need to keep straight"
+                    HeightRequest="90"
+                    SemanticProperties.Description="Notes about the new character" />
+            <Button Text="Add character"
+                    Command="{Binding CreateCommand}"
+                    HorizontalOptions="Start" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="2" IsVisible="{Binding IsEmpty}" Spacing="8" VerticalOptions="Center">
+            <Label Style="{StaticResource EmptyStateLabel}" Text="No characters yet." />
+            <Label Style="{StaticResource EmptyStateLabel}"
+                   Text="Add the people in your story here so you can keep their details straight across a long book." />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding Characters}"
+                        IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CharacterEditor">
+                    <Border Padding="12" Margin="0,0,0,10" StrokeShape="RoundRectangle 8">
+                        <VerticalStackLayout Spacing="6">
+                            <Entry Text="{Binding Name}"
+                                   FontFamily="OpenSansSemibold"
+                                   SemanticProperties.Description="Character name" />
+                            <Editor Text="{Binding Notes}"
+                                    HeightRequest="90"
+                                    Placeholder="Notes"
+                                    SemanticProperties.Description="Notes about this character" />
+                            <!-- No save button: edits persist themselves (FR-004). -->
+                            <Button Text="Delete"
+                                    HorizontalOptions="Start"
+                                    Style="{StaticResource DangerButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CharactersViewModel}}, Path=DeleteCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Deletes this character after asking you to confirm" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Label Grid.Row="3"
+               Style="{StaticResource StatusLabel}"
+               Text="{Binding StatusMessage}"
+               SemanticProperties.Description="{Binding StatusMessage}" />
+    </Grid>
+</ContentPage>

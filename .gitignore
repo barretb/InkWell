@@ -1,0 +1,78 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.DotSettings.user
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+*.binlog
+BenchmarkDotNet.Artifacts/
+TestResults/
+*.coverage
+*.coveragexml
+coverage/
+
+# MAUI / platform build output
+*.aab
+*.apk
+*.ipa
+*.app
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.keystore
+!inkwell.debug.keystore
+Platforms/Android/Resources/Resource.designer.cs
+
+# Apple
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Editor asset build (CodeMirror bundle sources)
+node_modules/
+src/InkWell.Maui/editor-src/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Local secrets / environment
+.env
+.env.*
+*.pfx
+*.p12
+secrets.json
+
+# Local database artifacts from integration tests
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# OS noise
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.tmp
+*.swp

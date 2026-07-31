@@ -1,0 +1,21 @@
+<!--
+  The page HybridWebView loads for the chapter editor.
+
+  Accessibility notes (FR-019):
+  * The editor root is labelled and CodeMirror is configured with role="textbox", so a screen
+    reader announces it as an editable region rather than an unlabelled div.
+  * #a11y-live is an ARIA live region. Word counts, save state, and the focus-mode transition are
+    written here so those changes are spoken without stealing focus from the caret.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>InkWell chapter editor</title>
+<link rel="stylesheet" href="styles.css" />
+
+<main id="editor-root"
+      aria-label="Chapter text"
+      data-empty-hint="Start writing. Your words are saved automatically."></main>
+
+<div id="a11y-live" role="status" aria-live="polite" aria-atomic="true" class="visually-hidden"></div>
+
+<script src="editor.bundle.js"></script>

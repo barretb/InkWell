@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.PlotThreadsPage"
+             x:DataType="vm:PlotThreadsViewModel"
+             Title="Plot threads">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="20" RowSpacing="14">
+
+        <Label Grid.Row="0"
+               Style="{StaticResource HeadingLabel}"
+               Text="Plot threads"
+               SemanticProperties.HeadingLevel="Level1" />
+
+        <VerticalStackLayout Grid.Row="1" Spacing="8">
+            <Entry Text="{Binding NewTitle}"
+                   Placeholder="Title"
+                   SemanticProperties.Description="Title of a new plot thread" />
+            <Editor Text="{Binding NewNotes}"
+                    Placeholder="Notes — where it starts, where it pays off"
+                    HeightRequest="90"
+                    SemanticProperties.Description="Notes about the new plot thread" />
+            <Button Text="Add plot thread"
+                    Command="{Binding CreateCommand}"
+                    HorizontalOptions="Start" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="2" IsVisible="{Binding IsEmpty}" Spacing="8" VerticalOptions="Center">
+            <Label Style="{StaticResource EmptyStateLabel}" Text="No plot threads yet." />
+            <Label Style="{StaticResource EmptyStateLabel}"
+                   Text="Track the threads running through your book here so none of them gets dropped." />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding PlotThreads}"
+                        IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:PlotThreadEditor">
+                    <Border Padding="12" Margin="0,0,0,10" StrokeShape="RoundRectangle 8">
+                        <VerticalStackLayout Spacing="6">
+                            <Entry Text="{Binding Title}"
+                                   FontFamily="OpenSansSemibold"
+                                   SemanticProperties.Description="Plot thread title" />
+                            <Editor Text="{Binding Notes}"
+                                    HeightRequest="90"
+                                    Placeholder="Notes"
+                                    SemanticProperties.Description="Notes about this plot thread" />
+                            <!-- No save button: edits persist themselves (FR-004). -->
+                            <Button Text="Delete"
+                                    HorizontalOptions="Start"
+                                    Style="{StaticResource DangerButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlotThreadsViewModel}}, Path=DeleteCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Deletes this plot thread after asking you to confirm" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Label Grid.Row="3"
+               Style="{StaticResource StatusLabel}"
+               Text="{Binding StatusMessage}"
+               SemanticProperties.Description="{Binding StatusMessage}" />
+    </Grid>
+</ContentPage>

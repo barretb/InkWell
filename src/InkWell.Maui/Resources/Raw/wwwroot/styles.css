@@ -1,0 +1,153 @@
+/*
+  Editor theme.
+
+  Two things here are load-bearing rather than decorative:
+  * The `.distraction-free` class is the entire focus-mode implementation on the web side — it
+    widens the measure and drops the padding, while MAUI hides its own chrome. Because it only
+    changes layout, the CodeMirror document and selection are untouched by the transition, which is
+    what lets the caret survive it (FR-008, SC-006).
+  * `.visually-hidden` keeps the ARIA live region in the accessibility tree while removing it from
+    the visual flow. `display: none` would silence it.
+*/
+
+:root {
+    --ink-bg: #fbfaf7;
+    --ink-fg: #16191c;
+    --ink-muted: #55606b;
+    --ink-accent: #1f5b8f;
+    --ink-rule: #d5d8dc;
+    --ink-measure: 34rem;
+    --ink-font: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ink-bg: #14171a;
+        --ink-fg: #f2f4f6;
+        --ink-muted: #aeb8c2;
+        --ink-accent: #79b6e8;
+        --ink-rule: #39414a;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--ink-bg);
+    color: var(--ink-fg);
+    font-family: var(--ink-font);
+    -webkit-text-size-adjust: 100%;
+}
+
+#editor-root {
+    display: block;
+    height: 100%;
+    padding: 1.5rem 1.25rem;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* CodeMirror surface */
+.cm-editor {
+    height: 100%;
+    background: transparent;
+    color: var(--ink-fg);
+    font-family: var(--ink-font);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+}
+
+.cm-editor.cm-focused {
+    /* A visible focus indicator that meets the 3:1 non-text contrast rule (WCAG 2.4.7). */
+    outline: 2px solid var(--ink-accent);
+    outline-offset: 2px;
+}
+
+.cm-scroller {
+    font-family: inherit;
+    line-height: inherit;
+    overflow-y: auto;
+}
+
+.cm-content {
+    max-width: var(--ink-measure);
+    margin: 0 auto;
+    padding: 0 0 40vh 0;   /* trailing space so the last line is never pinned to the bottom edge */
+    caret-color: var(--ink-accent);
+}
+
+.cm-line { padding: 0; }
+
+.cm-selectionBackground,
+.cm-editor ::selection { background: color-mix(in srgb, var(--ink-accent) 28%, transparent); }
+
+.cm-cursor { border-left-color: var(--ink-accent); border-left-width: 2px; }
+
+/* Live-preview decorations */
+.ink-h1 { font-size: 1.9em; font-weight: 700; line-height: 1.25; }
+.ink-h2 { font-size: 1.5em; font-weight: 700; line-height: 1.3; }
+.ink-h3 { font-size: 1.25em; font-weight: 700; }
+.ink-strong { font-weight: 700; }
+.ink-em { font-style: italic; }
+.ink-strike { text-decoration: line-through; }
+.ink-code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+    background: color-mix(in srgb, var(--ink-fg) 8%, transparent);
+    border-radius: 3px;
+    padding: 0.1em 0.3em;
+}
+.ink-quote {
+    border-left: 3px solid var(--ink-rule);
+    padding-left: 0.85em;
+    color: var(--ink-muted);
+    font-style: italic;
+}
+.ink-link { color: var(--ink-accent); text-decoration: underline; }
+
+/* Markdown punctuation hidden on every line except the one holding the cursor. */
+.ink-syntax-hidden { display: none; }
+
+.ink-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0.75em auto;
+    border-radius: 4px;
+}
+
+.ink-image-missing-alt {
+    /* Not colour alone: the badge carries the words "needs alt text" (FR-019). */
+    display: block;
+    font-family: system-ui, sans-serif;
+    font-size: 0.75rem;
+    text-align: center;
+    color: var(--ink-muted);
+    border: 1px dashed var(--ink-rule);
+    border-radius: 4px;
+    padding: 0.2em 0.4em;
+    margin: 0 auto 0.75em auto;
+    max-width: max-content;
+}
+
+/* Focus mode: chrome is gone on the MAUI side, so the text gets the whole surface. */
+.distraction-free #editor-root { padding: 3rem 1.25rem 1.25rem; }
+.distraction-free .cm-content { max-width: 38rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+    #editor-root { transition: padding 120ms ease-out; }
+}

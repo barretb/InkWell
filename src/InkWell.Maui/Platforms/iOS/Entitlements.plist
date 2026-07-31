@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <!--
+        Keychain Sharing is required for MAUI SecureStorage, which holds the 256-bit SQLCipher key
+        for the local encrypted database (FR-016). Without this entitlement SecureStorage throws
+        `MissingEntitlement` at first run (research.md §2). No network entitlement is granted:
+        InkWell never transmits user content (FR-017).
+    -->
+    <dict>
+        <key>keychain-access-groups</key>
+        <array>
+            <string>$(AppIdentifierPrefix)com.inkwell.app</string>
+        </array>
+    </dict>
+</plist>

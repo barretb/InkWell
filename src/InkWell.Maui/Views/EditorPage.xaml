@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:InkWell.Presentation.Controls;assembly=InkWell.Presentation"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.EditorPage"
+             x:DataType="vm:EditorViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="{Binding IsDistractionFree, Converter={StaticResource Not}}"
+             Shell.TabBarIsVisible="{Binding IsDistractionFree, Converter={StaticResource Not}}">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Chrome. Hidden entirely in distraction-free mode (FR-007). -->
+        <Grid Grid.Row="0"
+              x:Name="ChromeRow"
+              Padding="16,10"
+              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+              ColumnSpacing="8"
+              IsVisible="{Binding IsDistractionFree, Converter={StaticResource Not}}">
+
+            <Label Grid.Column="0"
+                   Style="{StaticResource HeadingLabel}"
+                   FontSize="18"
+                   VerticalOptions="Center"
+                   Text="{Binding Title}"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <!-- Reference lookups sit beside the editor: opening one never disturbs the caret (FR-015). -->
+            <Button Grid.Column="1"
+                    Text="Characters"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding OpenCharactersCommand}"
+                    SemanticProperties.Hint="Opens your character notes. You return to the same place in your chapter." />
+
+            <Button Grid.Column="2"
+                    Text="Plot threads"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding OpenPlotThreadsCommand}"
+                    SemanticProperties.Hint="Opens your plot-thread notes. You return to the same place in your chapter." />
+
+            <Button Grid.Column="3"
+                    Text="Add image"
+                    Style="{StaticResource SecondaryButton}"
+                    Clicked="OnAddImageClicked"
+                    SemanticProperties.Hint="Choose an image to embed in this chapter" />
+
+            <Button Grid.Column="4"
+                    Text="Focus mode"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding ToggleDistractionFreeCommand}"
+                    SemanticProperties.Hint="Hides everything except your text. Press Escape to leave." />
+        </Grid>
+
+        <controls:EditorHostView x:Name="Editor" Grid.Row="1" />
+
+        <!--
+            The one control that stays visible in focus mode, so the writer always has a way out
+            that does not depend on knowing a shortcut (FR-008).
+        -->
+        <Grid Grid.Row="2" Padding="16,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                <Label Style="{StaticResource StatusLabel}"
+                       Text="{Binding CountsSummary}"
+                       SemanticProperties.Description="{Binding CountsSummary}" />
+                <!-- Daily progress is reachable without leaving the chapter (FR-011). -->
+                <Label Style="{StaticResource StatusLabel}"
+                       IsVisible="{Binding HasDailyGoal}"
+                       Text="{Binding GoalSummary}"
+                       SemanticProperties.Description="{Binding GoalSummary}" />
+                <Label Style="{StaticResource StatusLabel}"
+                       Text="{Binding StatusMessage}"
+                       SemanticProperties.Description="{Binding StatusMessage}" />
+                <Label Style="{StaticResource StatusLabel}"
+                       IsVisible="{Binding HasImagesNeedingAltText}"
+                       Text="{Binding AltTextGapSummary}"
+                       SemanticProperties.Description="{Binding AltTextGapSummary}" />
+            </VerticalStackLayout>
+
+            <Button Grid.Column="1"
+                    Text="Leave focus mode"
+                    Style="{StaticResource SecondaryButton}"
+                    IsVisible="{Binding IsDistractionFree}"
+                    Command="{Binding ToggleDistractionFreeCommand}" />
+        </Grid>
+    </Grid>
+</ContentPage>

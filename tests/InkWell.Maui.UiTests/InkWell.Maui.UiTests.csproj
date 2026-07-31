@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Story-level journey, accessibility, and performance tests.
+
+    They drive the real ViewModels against a real encrypted database, substituting only the two
+    things that need a device: the editor surface (`IEditorHost`) and the prompts
+    (`IConfirmationService`, `IErrorPresenter`, `INavigationService`).
+
+    Referencing `InkWell.Presentation` — a MAUI class library — works, where referencing the
+    `InkWell.Maui` application project does not: an app project's single-project asset pipeline
+    re-processes its icon and splash screen in every MAUI-enabled consumer and fails on duplicate
+    output names.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>InkWell.Maui.UiTests</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>false</SingleProject>
+    <EnableDefaultMauiItems>false</EnableDefaultMauiItems>
+    <OutputType>Library</OutputType>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InkWell.Infrastructure\InkWell.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\InkWell.Presentation\InkWell.Presentation.csproj" />
+    <ProjectReference Include="..\InkWell.Application.Tests\InkWell.Application.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

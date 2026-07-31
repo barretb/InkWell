@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:dtos="clr-namespace:InkWell.Application.Abstractions.Dtos;assembly=InkWell.Application"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.LibraryPage"
+             x:DataType="vm:LibraryViewModel"
+             Title="Your manuscripts">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="20" RowSpacing="14">
+
+        <Label Grid.Row="0"
+               Style="{StaticResource HeadingLabel}"
+               Text="Your manuscripts"
+               SemanticProperties.HeadingLevel="Level1" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Entry x:Name="NewTitleEntry"
+                   Grid.Column="0"
+                   Text="{Binding NewManuscriptTitle}"
+                   Placeholder="Title of a new manuscript"
+                   ReturnCommand="{Binding CreateCommand}"
+                   SemanticProperties.Description="Title of a new manuscript" />
+            <Button Grid.Column="1"
+                    Text="Create"
+                    Command="{Binding CreateCommand}"
+                    SemanticProperties.Hint="Creates a manuscript with the title you typed" />
+        </Grid>
+
+        <!-- Empty state: guidance rather than a blank screen (spec.md edge cases). -->
+        <VerticalStackLayout Grid.Row="2" IsVisible="{Binding IsEmpty}" Spacing="8" VerticalOptions="Center">
+            <Label Style="{StaticResource EmptyStateLabel}"
+                   Text="You have no manuscripts yet." />
+            <Label Style="{StaticResource EmptyStateLabel}"
+                   Text="Give one a title above and choose Create to start drafting. Everything you write stays on this device." />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding Manuscripts}"
+                        IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="dtos:ManuscriptSummary">
+                    <Border Padding="14" Margin="0,0,0,10" StrokeShape="RoundRectangle 8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="17" />
+                                <Label Style="{StaticResource SecondaryLabel}">
+                                    <Label.Text>
+                                        <MultiBinding StringFormat="{}{0} chapters · {1:N0} words">
+                                            <Binding Path="ChapterCount" />
+                                            <Binding Path="WordCount" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="1"
+                                    Text="Open"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Opens this manuscript" />
+
+                            <Button Grid.Column="2"
+                                    Text="Delete"
+                                    Style="{StaticResource DangerButton}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=DeleteCommand}"
+                                    CommandParameter="{Binding .}"
+                                    SemanticProperties.Hint="Deletes this manuscript after asking you to confirm" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Status as text, announced politely; never colour alone (FR-019). -->
+        <Label Grid.Row="3"
+               Style="{StaticResource StatusLabel}"
+               Text="{Binding StatusMessage}"
+               SemanticProperties.Description="{Binding StatusMessage}" />
+    </Grid>
+</ContentPage>
