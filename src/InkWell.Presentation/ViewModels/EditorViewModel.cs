@@ -282,13 +282,16 @@ public sealed partial class EditorViewModel : BaseViewModel, IQueryAttributable,
     private async void OnDistractionFreeToggleRequested(object? sender, EventArgs e)
         => await ToggleDistractionFreeAsync().ConfigureAwait(true);
 
+    // The handshake times out on a thread pool continuation, so both the status line and the alert
+    // are marshalled back before they touch anything native.
     private async void OnBridgeFailed(object? sender, string reason)
-    {
-        // The editor is unreachable, so nothing is being autosaved. Saying so is the whole point:
-        // a writer who is told immediately loses a paragraph, one who is not loses an evening.
-        StatusMessage = "Not saved — the writing surface did not load";
-        await _errors.ShowAsync("Your typing is not being saved", reason).ConfigureAwait(true);
-    }
+        => await UiThread.RunAsync(async () =>
+        {
+            // The editor is unreachable, so nothing is being autosaved. Saying so is the whole point:
+            // a writer who is told immediately loses a paragraph, one who is not loses an evening.
+            StatusMessage = "Not saved — the writing surface did not load";
+            await _errors.ShowAsync("Your typing is not being saved", reason).ConfigureAwait(true);
+        }).ConfigureAwait(false);
 
     private async void OnImageRequested(object? sender, EditorImageRequested e)
     {
@@ -321,16 +324,20 @@ public sealed partial class EditorViewModel : BaseViewModel, IQueryAttributable,
 
     private void OnImageMissingAltText(object? sender, Guid imageId) => ImagesNeedingAltText++;
 
-    private void OnSaved(object? sender, AutoSaveResult result) => Apply(result);
+    // A debounced commit finishes on a thread pool thread, so every autosave outcome — the counts,
+    // the status line, the failure alert — crosses back to the UI thread here. A flush raised from a
+    // button is already on it and runs inline, unchanged.
+    private void OnSaved(object? sender, AutoSaveResult result) => UiThread.Run(() => Apply(result));
 
     private async void OnSaveFailed(object? sender, Exception error)
-    {
-        StatusMessage = "Not saved";
-        await _errors.ShowAsync(
-            "Your last edit was not saved",
-            "InkWell could not write to the manuscript store on this device. Your text is still on " +
-            $"screen — copy it somewhere safe before closing the app.\n\n{error.Message}").ConfigureAwait(true);
-    }
+        => await UiThread.RunAsync(async () =>
+        {
+            StatusMessage = "Not saved";
+            await _errors.ShowAsync(
+                "Your last edit was not saved",
+                "InkWell could not write to the manuscript store on this device. Your text is still on " +
+                $"screen — copy it somewhere safe before closing the app.\n\n{error.Message}").ConfigureAwait(true);
+        }).ConfigureAwait(false);
 
     private void Apply(AutoSaveResult result)
     {

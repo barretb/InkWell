@@ -12,6 +12,16 @@
 <title>InkWell chapter editor</title>
 <link rel="stylesheet" href="styles.css" />
 
+<!--
+  The host bridge. `window.HybridWebView` is not ambient: MAUI serves this library from a virtual
+  path and the page has to ask for it. Without it `SendRawMessage` does not exist, so the editor's
+  `editorReady` announcement goes nowhere, the host times out after 15 seconds and tells the writer
+  their typing is not being saved — which is true, because no chapter id ever arrives.
+
+  Loaded before editor.bundle.js so the bridge is in place the moment the editor announces itself.
+-->
+<script src="_framework/hybridwebview.js"></script>
+
 <main id="editor-root"
       aria-label="Chapter text"
       data-empty-hint="Start writing. Your words are saved automatically."></main>
