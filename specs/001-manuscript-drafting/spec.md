@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-24
 
-**Status**: Draft
+**Status**: Approved
 
 **Input**: User description: "Build an app for novelists to draft chapters and organize them into a manuscript. Writers track characters and plot threads, set daily word-count goals, and write in a distraction-free editor. Everything works offline and saves locally."
 
