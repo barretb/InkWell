@@ -3,10 +3,16 @@
 ViewModels, the services they depend on, and the chapter editor host. A MAUI **class library**, not
 part of the app project.
 
-- `ViewModels/` — `LibraryViewModel`, `ManuscriptViewModel`, `EditorViewModel`, and their shared base
-- `Services/` — `INavigationService`, `IConfirmationService`, `IErrorPresenter`, and the platform
-  storage adapters (`SecureStorage`, app data paths) behind their Application-layer ports
-- `Controls/` — `IEditorHost` and `EditorHostView`, the `HybridWebView` + CodeMirror bridge
+- `ViewModels/` — one per screen (`Library`, `Manuscript`, `Editor`, `Goals`, `Characters`,
+  `PlotThreads`, `Export`, `DataControls`) plus their shared base
+- `Services/` — `INavigationService`, `IConfirmationService`, `IErrorPresenter`,
+  `IFileDestinationPicker`, `IEditorPreferences`, the platform adapters that implement them, and
+  `StoreFailure`, which turns an unreachable Keychain or an unreadable database into a message that
+  says whether the writer's work survived
+- `Controls/` — `IEditorHost` with its two implementations: `EditorHostView`, the `HybridWebView` +
+  CodeMirror bridge, and `AccessibleEditorFallbackView`, a native `Editor` showing Markdown source
+  for screen-reader users. `AccessibleEditorDocument` holds the fallback's text rules, separately
+  from the control, so they can be tested without a running MAUI app.
 
 ## Why this is a separate project
 

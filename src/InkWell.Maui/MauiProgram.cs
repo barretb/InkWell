@@ -2,6 +2,7 @@ using CommunityToolkit.Maui;
 using InkWell.Application.Abstractions;
 using InkWell.Application.UseCases;
 using InkWell.Infrastructure;
+using InkWell.Infrastructure.Export;
 using InkWell.Infrastructure.Markdown;
 using InkWell.Infrastructure.Persistence;
 using InkWell.Infrastructure.Security;
@@ -52,6 +53,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDailyGoalRepository, DailyGoalRepository>();
         builder.Services.AddSingleton<IWritingHistoryRepository, WritingHistoryRepository>();
         builder.Services.AddSingleton<IReferenceRepository, ReferenceRepository>();
+        builder.Services.AddSingleton<IDataControlsRepository, DataControlsRepository>();
+        builder.Services.AddSingleton<IExportService, ExportService>();
 
         // Application use cases.
         builder.Services.AddSingleton<ManuscriptUseCases>();
@@ -65,6 +68,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<INavigationService, ShellNavigationService>();
         builder.Services.AddSingleton<IConfirmationService, AlertConfirmationService>();
         builder.Services.AddSingleton<IErrorPresenter, AlertErrorPresenter>();
+        builder.Services.AddSingleton<IEditorPreferences, MauiEditorPreferences>();
+        builder.Services.AddSingleton<IFileDestinationPicker, ToolkitFileDestinationPicker>();
 
         // Screens. Transient so that reopening a chapter starts from a clean editor state rather
         // than inheriting the previous chapter's pending autosave.
@@ -80,6 +85,10 @@ public static class MauiProgram
         builder.Services.AddTransient<CharactersPage>();
         builder.Services.AddTransient<PlotThreadsViewModel>();
         builder.Services.AddTransient<PlotThreadsPage>();
+        builder.Services.AddTransient<ExportViewModel>();
+        builder.Services.AddTransient<ExportPage>();
+        builder.Services.AddTransient<DataControlsViewModel>();
+        builder.Services.AddTransient<DataControlsPage>();
 
         return builder.Build();
     }

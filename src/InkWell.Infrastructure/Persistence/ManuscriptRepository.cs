@@ -22,7 +22,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
     /// <inheritdoc />
     public async Task<IReadOnlyList<ManuscriptSummary>> ListSummariesAsync(CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         // One query rather than N+1: the library shows counts for every manuscript, and a writer
         // with fifty manuscripts should not cost fifty round trips.
@@ -50,7 +51,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
     /// <inheritdoc />
     public async Task<Manuscript?> GetAsync(Guid manuscriptId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<ManuscriptRow> rows = await connection
             .QueryAsync<ManuscriptRow>("SELECT * FROM Manuscript WHERE Id = ?", manuscriptId.ToString())
             .ConfigureAwait(false);
@@ -67,7 +69,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
             return null;
         }
 
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         // Chapter prose is deliberately excluded: opening a 150,000-word manuscript must not read
         // 150,000 words (SC-004).
@@ -87,7 +90,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
     public async Task AddAsync(Manuscript manuscript, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(manuscript);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         await connection.InsertAsync(ManuscriptRow.FromEntity(manuscript)).ConfigureAwait(false);
     }
 
@@ -98,7 +102,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
         DateTimeOffset modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection.ExecuteAsync(
             "UPDATE Manuscript SET Title = ?, ModifiedAt = ? WHERE Id = ?",
             title, RowConversions.ToTicks(modifiedAt), manuscriptId.ToString()).ConfigureAwait(false);
@@ -109,7 +114,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
     /// <inheritdoc />
     public async Task<bool> DeleteAsync(Guid manuscriptId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         // Chapters, images, characters, plot threads, the goal, and the writing history all go with
         // it through ON DELETE CASCADE, inside SQLite's own statement transaction (FR-018, SC-008).
@@ -123,7 +129,8 @@ public sealed class ManuscriptRepository : IManuscriptRepository
     /// <inheritdoc />
     public async Task TouchAsync(Guid manuscriptId, DateTimeOffset modifiedAt, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         await connection.ExecuteAsync(
             "UPDATE Manuscript SET ModifiedAt = ? WHERE Id = ?",
             RowConversions.ToTicks(modifiedAt), manuscriptId.ToString()).ConfigureAwait(false);

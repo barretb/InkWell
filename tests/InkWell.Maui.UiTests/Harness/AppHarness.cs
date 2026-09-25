@@ -2,6 +2,8 @@ using InkWell.Application.Abstractions;
 using InkWell.Application.Tests.Fakes;
 using InkWell.Application.UseCases;
 using InkWell.Domain.Entities;
+using InkWell.Infrastructure.Export;
+using InkWell.Infrastructure.Markdown;
 using InkWell.Infrastructure.Persistence;
 using InkWell.Presentation.ViewModels;
 
@@ -87,6 +89,32 @@ public sealed class AppHarness : IAsyncDisposable
 
     /// <summary>The plot-threads screen.</summary>
     public PlotThreadsViewModel PlotThreads => new(ReferenceUseCases, Confirmation, Errors);
+
+    /// <summary>The stand-in save dialog.</summary>
+    public FakeFileDestinationPicker Picker { get; } = new();
+
+    /// <summary>EPUB and PDF export over the real store.</summary>
+    public IExportService ExportService { get; private set; } = null!;
+
+    /// <summary>View-all and delete-all data controls over the real store.</summary>
+    public IDataControlsRepository DataControlsRepository { get; private set; } = null!;
+
+    /// <summary>The export screen.</summary>
+    public ExportViewModel Export => new(ExportService, Picker, Errors);
+
+    /// <summary>The "your data" screen.</summary>
+    public DataControlsViewModel DataControls => new(DataControlsRepository, Confirmation, Errors);
+
+    /// <summary>A directory this test may export into; removed with the harness.</summary>
+    public string ExportDirectory
+    {
+        get
+        {
+            string path = Path.Combine(_directory, "exports");
+            Directory.CreateDirectory(path);
+            return path;
+        }
+    }
 
     /// <summary>
     /// The editor screen, attached to <see cref="EditorHost"/>. Created once per harness so a test
@@ -179,6 +207,8 @@ public sealed class AppHarness : IAsyncDisposable
             new WritingHistoryRepository(_factory),
             Clock);
         ReferenceUseCases = new ReferenceUseCases(new ReferenceRepository(_factory), manuscripts, Clock);
+        ExportService = new ExportService(manuscripts, ChapterRepository, Images, new MarkdownService());
+        DataControlsRepository = new DataControlsRepository(_factory, new Paths(_directory));
     }
 
     private sealed record Paths(string Directory) : IAppStoragePaths

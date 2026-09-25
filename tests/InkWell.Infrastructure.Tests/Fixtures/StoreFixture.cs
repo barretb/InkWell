@@ -2,6 +2,9 @@ using InkWell.Application.Abstractions;
 using InkWell.Application.Abstractions.Dtos;
 using InkWell.Application.Tests.Fakes;
 using InkWell.Application.UseCases;
+using InkWell.Domain.Entities;
+using InkWell.Infrastructure.Export;
+using InkWell.Infrastructure.Markdown;
 using InkWell.Infrastructure.Persistence;
 
 namespace InkWell.Infrastructure.Tests.Fixtures;
@@ -13,6 +16,9 @@ namespace InkWell.Infrastructure.Tests.Fixtures;
 public sealed class StoreFixture : IAsyncDisposable
 {
     private readonly KeyedDatabaseFixture _database = new();
+
+    private readonly string _exportDirectory =
+        Path.Combine(Path.GetTempPath(), "inkwell-exports", Guid.NewGuid().ToString("N"));
 
     /// <summary>Creates the fixture with a controllable clock.</summary>
     public StoreFixture()
@@ -29,6 +35,8 @@ public sealed class StoreFixture : IAsyncDisposable
             Clock);
         ReferenceUseCases = new ReferenceUseCases(
             new ReferenceRepository(_database.Factory), Manuscripts, Clock);
+        Export = new ExportService(Manuscripts, Chapters, Images, new MarkdownService());
+        DataControls = new DataControlsRepository(_database.Factory, _database.Paths);
     }
 
     /// <summary>The test's controllable clock.</summary>
@@ -54,6 +62,84 @@ public sealed class StoreFixture : IAsyncDisposable
 
     /// <summary>Character and plot-thread orchestration.</summary>
     public ReferenceUseCases ReferenceUseCases { get; private set; }
+
+    /// <summary>EPUB and PDF export, over the same store (FR-018).</summary>
+    public IExportService Export { get; private set; }
+
+    /// <summary>View-all and delete-all data controls (FR-018, SC-008).</summary>
+    public IDataControlsRepository DataControls { get; private set; }
+
+    /// <summary>The key store behind the encrypted database.</summary>
+    public IKeyStore KeyStore => _database.KeyStore;
+
+    /// <summary>The secure storage the database key lives in, so a test can see whether it survived.</summary>
+    public InMemorySecureStore SecureStore => _database.SecureStore;
+
+    /// <summary>A directory this test may write exports into; removed with the fixture.</summary>
+    public string ExportDirectory
+    {
+        get
+        {
+            Directory.CreateDirectory(_exportDirectory);
+            return _exportDirectory;
+        }
+    }
+
+    /// <summary>A path inside <see cref="ExportDirectory"/> for one exported file.</summary>
+    public string ExportPath(string fileName) => Path.Combine(ExportDirectory, fileName);
+
+    /// <summary>
+    /// Writes a chapter containing <paramref name="imageCount"/> embedded images and some prose,
+    /// returning the chapter's id.
+    /// </summary>
+    /// <remarks>
+    /// Images are inserted through the real repository so their bytes genuinely live in the
+    /// encrypted store, which is the only way an export test can prove it pulled them out of it.
+    /// </remarks>
+    public async Task<Guid> WriteChapterWithImagesAsync(
+        Guid manuscriptId,
+        string chapterTitle,
+        int imageCount,
+        string prose = "Elin watched the mill burn from the ridge.")
+    {
+        Chapter chapter = (await ChapterUseCases.AddAsync(manuscriptId, chapterTitle).ConfigureAwait(false)).Value;
+
+        var markdown = new System.Text.StringBuilder(prose);
+        for (int i = 0; i < imageCount; i++)
+        {
+            // Alternating formats, so one export exercises both the extension mapping and the
+            // media-type entries in the EPUB manifest.
+            (byte[] bytes, string mimeType) = i % 2 == 0 ? (PngBytes(), "image/png") : (GifBytes(), "image/gif");
+
+            InlineImageReference reference = await Images.AddAsync(
+                new InlineImageInsert(chapter.Id, bytes, mimeType, $"Figure {i + 1}"),
+                Clock.Now).ConfigureAwait(false);
+
+            markdown.Append("\n\n![").Append(reference.AltText).Append("](inkwell-img://").Append(reference.Id).Append(')');
+        }
+
+        string content = markdown.ToString();
+        await Chapters.CommitAutoSaveAsync(new AutoSaveCommit(
+            chapter.Id,
+            content,
+            Domain.Services.ProseWordCounter.Count(content),
+            Clock.Now,
+            Clock.Today)).ConfigureAwait(false);
+
+        return chapter.Id;
+    }
+
+    /// <summary>A genuinely valid 1×1 PNG.</summary>
+    /// <remarks>
+    /// Real image bytes rather than random data, because the PDF exporter hands them to PDFsharp,
+    /// which decodes them — random bytes would exercise the plumbing and not the embedding.
+    /// </remarks>
+    public static byte[] PngBytes() => Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    /// <summary>A genuinely valid 1×1 GIF, so a test can tell two embedded images apart.</summary>
+    public static byte[] GifBytes() => Convert.FromBase64String(
+        "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 
     /// <summary>
     /// Writes a chapter whose prose comes to exactly <paramref name="totalWords"/> words, through
@@ -101,8 +187,25 @@ public sealed class StoreFixture : IAsyncDisposable
             Clock);
         ReferenceUseCases = new ReferenceUseCases(
             new ReferenceRepository(_database.Factory), Manuscripts, Clock);
+        Export = new ExportService(Manuscripts, Chapters, Images, new MarkdownService());
+        DataControls = new DataControlsRepository(_database.Factory, _database.Paths);
     }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync() => _database.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _database.DisposeAsync().ConfigureAwait(false);
+
+        try
+        {
+            if (Directory.Exists(_exportDirectory))
+            {
+                Directory.Delete(_exportDirectory, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+            // A lingering handle on an exported file must never fail a test run.
+        }
+    }
 }

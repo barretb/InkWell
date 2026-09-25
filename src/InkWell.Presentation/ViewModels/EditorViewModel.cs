@@ -220,6 +220,26 @@ public sealed partial class EditorViewModel : BaseViewModel, IQueryAttributable,
     public Task OpenPlotThreadsAsync() => OpenReferenceAsync(Routes.PlotThreads);
 
     /// <summary>
+    /// Opens the export screen, offering this chapter as well as the whole manuscript (FR-018).
+    /// </summary>
+    /// <remarks>
+    /// The pending edit is committed first, so what gets exported is what the writer can see on
+    /// screen rather than the last debounced save.
+    /// </remarks>
+    [RelayCommand]
+    public async Task ExportAsync()
+    {
+        await FlushAsync().ConfigureAwait(true);
+
+        await _navigation.GoToAsync(Routes.Export, new Dictionary<string, object>
+        {
+            [Routes.ManuscriptIdParameter] = ManuscriptId,
+            [Routes.ChapterIdParameter] = ChapterId,
+            [Routes.ChapterTitleParameter] = Title,
+        }).ConfigureAwait(true);
+    }
+
+    /// <summary>
     /// Restores the writer's place after a reference view closes.
     /// </summary>
     /// <remarks>
@@ -294,11 +314,27 @@ public sealed partial class EditorViewModel : BaseViewModel, IQueryAttributable,
         }).ConfigureAwait(false);
 
     private async void OnImageRequested(object? sender, EditorImageRequested e)
+        => await InsertImageAsync(e.Bytes, e.MimeType, e.AltText).ConfigureAwait(true);
+
+    /// <summary>
+    /// Embeds an image in the open chapter and shows it inline (FR-003a).
+    /// </summary>
+    /// <remarks>
+    /// Public because the two editing surfaces reach insertion by different routes — the web editor
+    /// raises <see cref="IEditorHost.ImageRequested"/> from its own paste and drop handling, while
+    /// the native accessibility-mode editor has no such affordance and is driven from the page's
+    /// file picker. Both land here, so an image is embedded, counted, and flagged for missing
+    /// alternative text identically whichever surface the writer is using.
+    /// </remarks>
+    /// <param name="bytes">The image bytes, copied into the encrypted store.</param>
+    /// <param name="mimeType">The image's MIME type.</param>
+    /// <param name="altText">Alternative text, or null if the writer skipped it.</param>
+    public async Task InsertImageAsync(byte[] bytes, string mimeType, string? altText)
     {
         try
         {
             InlineImageReference reference = await _images
-                .AddAsync(new InlineImageInsert(ChapterId, e.Bytes, e.MimeType, e.AltText), _clock.Now)
+                .AddAsync(new InlineImageInsert(ChapterId, bytes, mimeType, altText), _clock.Now)
                 .ConfigureAwait(true);
 
             if (_host is not null)

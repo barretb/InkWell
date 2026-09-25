@@ -43,8 +43,12 @@
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
 
-		<!-- Custom Fonts (also used by the PDF exporter's font resolver) -->
-		<MauiFont Include="Resources\Fonts\*" />
+		<!--
+			Custom fonts. The files live in InkWell.Infrastructure, embedded in that assembly for the
+			PDF exporter's font resolver, and are linked here so the UI and the exported PDF are set
+			in the same faces. One copy, owned by the layer that cannot work without it.
+		-->
+		<MauiFont Include="..\InkWell.Infrastructure\Export\Fonts\*.ttf" Link="Resources\Fonts\%(Filename)%(Extension)" />
 
 		<!-- Raw Assets: the CodeMirror 6 editor bundle lives under Resources\Raw\wwwroot -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />

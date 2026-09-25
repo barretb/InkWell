@@ -30,7 +30,8 @@ public sealed class WritingHistoryRepository : IWritingHistoryRepository
         DateOnly localDate,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<DailyWritingRecordRow> rows = await connection.QueryAsync<DailyWritingRecordRow>(
             "SELECT * FROM DailyWritingRecord WHERE ManuscriptId = ? AND Date = ?",
             manuscriptId.ToString(),
@@ -47,13 +48,17 @@ public sealed class WritingHistoryRepository : IWritingHistoryRepository
         int? goalTarget,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         await connection.RunInTransactionAsync(tx =>
             ChapterRepository.UpsertDay(tx, manuscriptId.ToString(), localDate, deltaWords, goalTarget))
             .ConfigureAwait(false);
 
-        return (await GetAsync(manuscriptId, localDate, cancellationToken).ConfigureAwait(false))!;
+        List<DailyWritingRecordRow> rows = await connection.QueryAsync<DailyWritingRecordRow>(
+            "SELECT * FROM DailyWritingRecord WHERE ManuscriptId = ? AND Date = ?",
+            manuscriptId.ToString(), RowConversions.ToText(localDate)).ConfigureAwait(false);
+        return rows[0].ToEntity();
     }
 
     /// <inheritdoc />
@@ -63,7 +68,8 @@ public sealed class WritingHistoryRepository : IWritingHistoryRepository
         DateOnly toDate,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         // Dates are stored as ISO yyyy-MM-dd, which orders chronologically as text — so the range
         // filter and the newest-first ordering are both plain string comparisons on an index.

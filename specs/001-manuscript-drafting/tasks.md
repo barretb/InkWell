@@ -13,9 +13,44 @@ delivered independently.
 
 ## Implementation status
 
-Phases 1–6 (Setup, Foundational, and all four user stories) are implemented; 256 tests pass and the
-solution builds. Phases 7–8 — cross-cutting export and data controls, then polish — have not been
-started, so FR-018, SC-008, and SC-009 are not yet delivered.
+**All eight phases are implemented: 122 of 132 tasks complete.** Every functional requirement
+FR-001–FR-019 and every success criterion is delivered in code, including the export, data-control,
+and polish work that Phase 7–8 covers (FR-018, SC-008, SC-009).
+
+Verified 2026-09-02 by `dotnet test InkWell.slnx`: **458 passing, 0 failing** — 90 in
+`InkWell.Domain.Tests`, 60 in `InkWell.Application.Tests`, 148 in `InkWell.Infrastructure.Tests`,
+160 in `InkWell.Maui.UiTests`. `dotnet build InkWell.slnx` reports 0 warnings.
+
+**The 10 open tasks all need a device or simulator** and cannot be closed on a Windows build host:
+T012 and T013 (SQLCipher and the `HybridWebView` bridge on Apple/Android), T071, T072, T082, T096,
+T106 and T130 (screen-reader and on-device verification), T107 (PDFsharp font rendering on iOS and
+Android), and T129 (the WebView QA matrix). None is blocked by missing code. See
+[quickstart.md](./quickstart.md) §Status for exactly what each still needs.
+
+### What Phase 7–8 added
+
+- **Export** (T113–T117): `EpubExporter` builds an EPUB 3 by hand over `ZipArchive`; `PdfExporter`
+  walks the Markdig AST into MigraDoc; both embed every inline image, at whole-manuscript and
+  per-chapter granularity. **Verified against EPUBCheck 5.3.0 with `--failonwarnings`: zero errors**
+  (research.md §5.7). `BundledFontResolver` embeds the TrueType faces PDFsharp needs, because its
+  Core build reads no system fonts and would otherwise render an empty PDF on mobile.
+- **Data controls** (T118, T119): a screen listing everything stored, plus delete-one and
+  delete-everything. `DeleteAllDataAsync` vacuums the database — deleting rows alone would leave the
+  writer's prose in freed pages — and then drops the encryption key.
+- **Accessibility** (T034, T054, T070): a contrast harness that computes WCAG ratios over the
+  shipping `Colors.xaml`, and the native `Editor` fallback for screen-reader users. The harness found
+  a real defect on its first run: the transparent-background secondary and danger buttons used a
+  decorative border token at ~1.4:1, where SC 1.4.11 requires 3:1 for a boundary that is the only
+  thing identifying a control. Fixed by splitting the token by role.
+- **Performance** (T121–T123): a 150,104-word, 52-chapter seeded manuscript. Measured on desktop:
+  0.009 ms per keystroke against a 16 ms frame budget, chapter open and autosave commit both under a
+  millisecond. `UiThreadDisciplineTests` keeps blocking calls out of the UI layers by failing the
+  build rather than by a one-time review.
+- **Error handling** (T125): `StoreFailure` translates an unreachable Keychain or an unreadable
+  database into a message that says whether the writer's work survived. Before this, either would
+  have escaped `LibraryViewModel.LoadAsync` and closed the app on launch.
+- **Application unit tests** (T050, T098): 60 tests over in-memory fakes, closing the deviation
+  recorded below.
 
 **Two FR-004 bugs found and fixed after Phase 6** (see [research.md](./research.md) §5.4, §5.5):
 
@@ -42,25 +77,46 @@ Deviations and known gaps inside the completed phases:
 - **T012 / T013 spikes are only partly retired.** SQLCipher is verified on Windows against a real
   keyed database; iOS, Mac Catalyst, and Android need a device. The `HybridWebView` bridge has not
   been exercised on any engine. See [research.md](./research.md) §5.
-- **Accessibility is verified only where code can decide it.** Keyboard-only completion, text-carried
-  state, and grammatical announcements are covered by tests for US2, US3, and US4. Contrast ratios
-  and real screen-reader output still need a device pass — that is what keeps T034, T054, T071,
-  T082, T096, and T106 open. The presentation extraction has unblocked T054, which no longer needs a
-  device.
-- **T050 and T098 have no dedicated files in `InkWell.Application.Tests`.** The manuscript, chapter,
-  and reference use cases — validation, `NotFound` handling, and freeform notes included — are
-  covered end to end by `InkWell.Infrastructure.Tests` against a real encrypted database rather than
-  by unit tests over fakes. That project currently holds only the shared fakes.
-- **T070 (native `Editor` accessibility fallback) is not built.**
+- **Accessibility is verified where code can decide it; the rest needs a device.** Keyboard-only
+  completion, text-carried state, grammatical announcements, and — since T034 — WCAG contrast ratios
+  computed over the shipping `Colors.xaml` are all automated. What still needs a device is real
+  screen-reader output: Narrator, VoiceOver, and TalkBack against the editor's `contenteditable`
+  surface. That is what keeps T071, T082, T096, T106, and T130 open, and it is the risk
+  research.md §1 names as the highest.
+- **The contrast harness found a live AA defect on its first run.** `SecondaryButton` and
+  `DangerButton` have transparent backgrounds, so their 1px border is the only thing identifying the
+  control — a case WCAG 2.1 SC 1.4.11 covers at 3:1 — and they were using the decorative `Border*`
+  token at roughly 1.4:1. Fixed by splitting the token: `Border*` stays soft for card strokes and
+  dividers, which are exempt, and a new `ControlBorder*` pair clears 3:1 for boundaries that carry
+  information. A test pins which role uses which, so the two cannot be swapped back.
 - **T082 and T096 are open only for their device half.** The code-level gap T075 exposed — the Shell
   navigation bar staying visible in focus mode — was found and fixed (`Shell.NavBarIsVisible`).
   US3's day rollover *is* verified automatically, by advancing an injected clock past midnight; what
-  remains for T096 is contrast and screen-reader verification on a device.
+  remains for T096 is screen-reader verification on a device.
+- **T115 bundles sans-serif faces, not the serif pair the plan named.** The resolver embeds the two
+  OpenSans weights already in the project rather than adding a serif font whose licence had not been
+  reviewed. Family names map to faces, so substituting a serif pair is a two-file change with no code
+  change (research.md §5.8).
 - **`RecordWordsForToday` is deliberately absent from `GoalUseCases`** (contracts/word-count-and-goals.md
   lists it). Recording a day's words happens inside the autosave transaction so prose and its day's
   total cannot diverge; a second, non-transactional write path for the same fact would be a way for
   them to. `IWritingHistoryRepository.AddWordsAsync` remains for tooling and shares the same upsert.
-- The solution file is `InkWell.slnx` (the .NET 10 default), not `InkWell.sln`.
+- **T035 was delivered as a capability assertion, not an egress harness.** Rather than instrumenting
+  operations to watch for network calls, `tests/InkWell.Infrastructure.Tests/Privacy/PlatformPrivacyManifestTests.cs`
+  asserts the app does not even *request* network permission (no Android `INTERNET`, no Apple
+  network-client entitlement). A re-added permission fails the build; an intent-level harness could not
+  catch that. Encryption-at-rest coverage lives in `DraftingPrivacyTests.cs`.
+
+**File paths in this document were re-synced with the source tree on 2026-09-02.** ViewModels,
+prompt/navigation services, and the editor host moved to `src/InkWell.Presentation/` in the Phase 4
+extraction above; MAUI pages are named `*Page.xaml` (not `*View.xaml`); the editor bridge handlers live
+in `Controls/EditorHostView.cs` rather than a separate `EditorBridge.cs`; and the solution file is
+`InkWell.slnx` (the .NET 10 default).
+
+**Structural change made during Phase 8**: the two TrueType faces moved from
+`src/InkWell.Maui/Resources/Fonts/` into `src/InkWell.Infrastructure/Export/Fonts/`, where they are
+embedded resources of the assembly that cannot work without them. The app links the same files back
+for its own typography, so there is one copy and the dependency points inward.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -74,11 +130,14 @@ Deviations and known gaps inside the completed phases:
 Clean-architecture multi-project solution per [plan.md](./plan.md) §Project Structure:
 
 - `src/InkWell.Domain/`, `src/InkWell.Application/`, `src/InkWell.Infrastructure/`,
-  `src/InkWell.Presentation/` (ViewModels, services, editor host), `src/InkWell.Maui/` (app host,
-  Views, composition root)
+  `src/InkWell.Presentation/` (ViewModels, services, editor host, `Routes.cs`), `src/InkWell.Maui/`
+  (app host, `Views/`, composition root)
 - `tests/InkWell.Domain.Tests/`, `tests/InkWell.Application.Tests/`, `tests/InkWell.Infrastructure.Tests/`,
   `tests/InkWell.Maui.UiTests/`
-- Editor web assets: `src/InkWell.Maui/Resources/Raw/wwwroot/`
+- Editor web assets: `src/InkWell.Maui/Resources/Raw/wwwroot/` (built from `src/InkWell.Maui/editor-src/`)
+- MAUI pages are named `*Page.xaml` under `src/InkWell.Maui/Views/`; their ViewModels are `*ViewModel.cs`
+  under `src/InkWell.Presentation/ViewModels/`
+- Solution file: `InkWell.slnx` at the repo root
 
 ---
 
@@ -86,12 +145,12 @@ Clean-architecture multi-project solution per [plan.md](./plan.md) §Project Str
 
 **Purpose**: Solution skeleton, projects, package management, and platform prerequisites
 
-- [X] T001 Create solution skeleton: `InkWell.sln` at repo root plus empty `src/` and `tests/` directories per plan.md §Project Structure
-- [X] T002 Create the Domain class library `src/InkWell.Domain/InkWell.Domain.csproj` (net10.0, no MAUI/native dependencies) and add it to `InkWell.sln`
-- [X] T003 Create the Application class library `src/InkWell.Application/InkWell.Application.csproj` referencing `InkWell.Domain`, and add it to `InkWell.sln`
-- [X] T004 Create the Infrastructure class library `src/InkWell.Infrastructure/InkWell.Infrastructure.csproj` referencing `InkWell.Application`, and add it to `InkWell.sln`
-- [X] T005 Create the MAUI app `src/InkWell.Maui/InkWell.Maui.csproj` multi-targeting `net10.0-windows10.0.19041.0`, `net10.0-maccatalyst`, `net10.0-ios`, `net10.0-android`, referencing Application + Infrastructure, and add it to `InkWell.sln`
-- [X] T006 Create the four xUnit test projects `tests/InkWell.Domain.Tests/`, `tests/InkWell.Application.Tests/`, `tests/InkWell.Infrastructure.Tests/`, `tests/InkWell.Maui.UiTests/` with project references to their targets, and add them to `InkWell.sln`
+- [X] T001 Create solution skeleton: `InkWell.slnx` at repo root plus empty `src/` and `tests/` directories per plan.md §Project Structure
+- [X] T002 Create the Domain class library `src/InkWell.Domain/InkWell.Domain.csproj` (net10.0, no MAUI/native dependencies) and add it to `InkWell.slnx`
+- [X] T003 Create the Application class library `src/InkWell.Application/InkWell.Application.csproj` referencing `InkWell.Domain`, and add it to `InkWell.slnx`
+- [X] T004 Create the Infrastructure class library `src/InkWell.Infrastructure/InkWell.Infrastructure.csproj` referencing `InkWell.Application`, and add it to `InkWell.slnx`
+- [X] T005 Create the MAUI class library `src/InkWell.Presentation/InkWell.Presentation.csproj` (ViewModels, services, editor host — no app icon/splash assets) and the MAUI app `src/InkWell.Maui/InkWell.Maui.csproj` multi-targeting `net10.0-windows10.0.19041.0`, `net10.0-maccatalyst`, `net10.0-ios`, `net10.0-android`, with the app referencing Application + Infrastructure + Presentation; add both to `InkWell.slnx`. Apple targets build only when `EnableAppleTargets` is set (research.md §5.3)
+- [X] T006 Create the four xUnit test projects `tests/InkWell.Domain.Tests/`, `tests/InkWell.Application.Tests/`, `tests/InkWell.Infrastructure.Tests/`, `tests/InkWell.Maui.UiTests/` with project references to their targets, and add them to `InkWell.slnx`
 - [X] T007 Add central package management in `Directory.Packages.props` pinning CommunityToolkit.Mvvm, CommunityToolkit.Maui, `sqlite-net-sqlcipher`, `SQLitePCLRaw.bundle_e_sqlcipher`, Markdig, PdfSharp 6 + MigraDoc, and xUnit — with a comment enforcing the research.md §2 rule that exactly ONE SQLitePCLRaw bundle may ever be referenced (never `sqlite-net-pcl` alongside it)
 - [X] T008 [P] Add `Directory.Build.props` and `.editorconfig` at repo root enabling nullable reference types, `TreatWarningsAsErrors`, `GenerateDocumentationFile`, and .NET analyzers for all projects
 - [X] T009 [P] Add platform prerequisites: `src/InkWell.Maui/Platforms/iOS/Entitlements.plist` and `src/InkWell.Maui/Platforms/MacCatalyst/Entitlements.plist` with Keychain Sharing (for `SecureStorage`) and `com.apple.security.files.user-selected.read-write` (for export), plus Android storage permission for API < 33 in `src/InkWell.Maui/Platforms/Android/AndroidManifest.xml`
@@ -142,9 +201,9 @@ infrastructure that every user story depends on
 ### Test infrastructure
 
 - [X] T032 [P] Create in-memory `FakeKeyStore` and `FixedClock` (advanceable, for day-rollover tests) in `tests/InkWell.Application.Tests/Fakes/`
-- [X] T033 [P] Create the keyed-database integration fixture `tests/InkWell.Infrastructure.Tests/Fixtures/KeyedDatabaseFixture.cs` that provisions and deletes a temp SQLCipher DB per test class
-- [ ] T034 [P] Create the accessibility test harness (keyboard-only driver + contrast assertion helpers) in `tests/InkWell.Maui.UiTests/Accessibility/AccessibilityHarness.cs`
-- [X] T035 [P] Create the privacy test harness asserting zero network egress during an operation in `tests/InkWell.Infrastructure.Tests/Privacy/NoEgressAssert.cs`
+- [X] T033 [P] Create the keyed-database integration fixtures `tests/InkWell.Infrastructure.Tests/Fixtures/KeyedDatabaseFixture.cs` (raw temp SQLCipher DB per test class) and `tests/InkWell.Infrastructure.Tests/Fixtures/StoreFixture.cs` (the same DB wired to real repositories and use cases)
+- [X] T034 [P] Create the accessibility test harness (keyboard-only driver + contrast assertion helpers) in `tests/InkWell.Maui.UiTests/Accessibility/AccessibilityHarness.cs`, alongside the existing ViewModel-level `tests/InkWell.Maui.UiTests/Harness/AppHarness.cs`, `Harness/FakeEditorHost.cs`, and `Harness/FakePrompts.cs`
+- [X] T035 [P] Assert the app cannot transmit user content at all, in `tests/InkWell.Infrastructure.Tests/Privacy/PlatformPrivacyManifestTests.cs` — no Android `INTERNET` permission and no Apple network-client entitlement, so a re-added permission fails the build rather than relying on an egress probe
 
 ### Encrypted store (tests first)
 
@@ -159,10 +218,10 @@ infrastructure that every user story depends on
 ### MAUI shell and editor host
 
 - [X] T043 Wire the DI composition root in `src/InkWell.Maui/MauiProgram.cs` registering repositories, domain services, clock, key store, markdown/export services, and CommunityToolkit.Maui
-- [X] T044 Create the app shell and navigation skeleton in `src/InkWell.Maui/AppShell.xaml` + `.cs` with routes for Library, ManuscriptShell, Editor, Goals, Characters, PlotThreads, and DataControls
+- [X] T044 Create the app shell and navigation skeleton in `src/InkWell.Maui/AppShell.xaml` + `.cs`, registering the route names and query parameters declared in `src/InkWell.Presentation/Routes.cs` (Library, Manuscript, Editor, Goals, Characters, PlotThreads — DataControls is added by T118) so a typo is a build error rather than a silent navigation no-op
 - [X] T045 [P] Add accessible theme resources in `src/InkWell.Maui/Resources/Styles/` — WCAG AA contrast color tokens for all themes, visible focus indicators, and text-bearing status styles (never color alone, FR-019)
-- [X] T046 [P] Create `BaseViewModel` and the navigation + confirmation-dialog services in `src/InkWell.Maui/ViewModels/BaseViewModel.cs` and `src/InkWell.Maui/Services/` (confirmation service is used by every destructive action, FR-005)
-- [X] T047 Implement the `HybridWebView` editor host control and JS↔C# bridge plumbing in `src/InkWell.Maui/Controls/EditorHostView.cs` + `EditorBridge.cs` per [contracts/chapter-editor-bridge.md](./contracts/chapter-editor-bridge.md)
+- [X] T046 [P] Create `BaseViewModel` and the navigation + confirmation-dialog services in `src/InkWell.Presentation/ViewModels/BaseViewModel.cs`, `src/InkWell.Presentation/Services/IUserPrompts.cs`, `Services/ShellServices.cs`, `Services/UiThread.cs`, and `Routes.cs` (the confirmation prompt is used by every destructive action, FR-005)
+- [X] T047 Implement the `HybridWebView` editor host control and JS↔C# bridge plumbing in `src/InkWell.Presentation/Controls/EditorHostView.cs`, behind the `src/InkWell.Presentation/Controls/IEditorHost.cs` seam that the UI tests substitute, per [contracts/chapter-editor-bridge.md](./contracts/chapter-editor-bridge.md)
 - [X] T048 Build the CodeMirror 6 base bundle (markdown language + bridge handshake, `role="textbox"`, semantic DOM, ARIA live region) in `src/InkWell.Maui/Resources/Raw/wwwroot/index.html` and `editor.js`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
@@ -183,11 +242,11 @@ reopen the app, and confirm all content and ordering are preserved.
 > Write these FIRST and confirm they FAIL before implementing T055 onward.
 
 - [X] T049 [P] [US1] Contract tests for manuscript/chapter persistence in `tests/InkWell.Infrastructure.Tests/Persistence/ManuscriptRepositoryTests.cs` — create→list round-trip, rename persists, reorder survives a simulated restart, delete cascades with no orphan rows (contracts/manuscript-service.md)
-- [ ] T050 [P] [US1] Unit tests for manuscript/chapter use cases against fakes in `tests/InkWell.Application.Tests/UseCases/ManuscriptUseCasesTests.cs` — title validation, `ModifiedAt` bumps, `ValidationError` when the reorder id set does not match the manuscript's chapters
+- [X] T050 [P] [US1] Unit tests for manuscript/chapter use cases against fakes in `tests/InkWell.Application.Tests/UseCases/ManuscriptUseCasesTests.cs` — title validation, `ModifiedAt` bumps, `ValidationError` when the reorder id set does not match the manuscript's chapters
 - [X] T051 [P] [US1] Contract tests for autosave in `tests/InkWell.Infrastructure.Tests/Persistence/AutoSaveTests.cs` — debounced commit lands within the durability window, `flushNow` commits synchronously, and `loadChapter`→edit→`contentChanged`→reopen store yields identical markdown (FR-004, SC-003)
 - [X] T052 [P] [US1] Contract tests for inline images in `tests/InkWell.Infrastructure.Tests/Persistence/InlineImageRepositoryTests.cs` — bytes are embedded in the encrypted store, survive deletion of the simulated source file, and cascade-delete with their chapter (FR-003a)
 - [X] T053 [P] [US1] Integration test of the US1 journey in `tests/InkWell.Maui.UiTests/UserStory1Tests.cs` — create manuscript, add three chapters, type prose, reorder, restart, verify content and order, delete a chapter only after confirmation
-- [ ] T054 [P] [US1] Accessibility tests in `tests/InkWell.Maui.UiTests/Accessibility/UserStory1AccessibilityTests.cs` — complete the journey keyboard-only (including chapter reorder), verify screen-reader announcement of manuscript/chapter structure and AA contrast (FR-019, SC-007)
+- [X] T054 [P] [US1] Accessibility tests in `tests/InkWell.Maui.UiTests/Accessibility/UserStory1AccessibilityTests.cs` — complete the journey keyboard-only (including chapter reorder), verify screen-reader announcement of manuscript/chapter structure and AA contrast (FR-019, SC-007)
 - [X] T055 [P] [US1] Privacy tests in `tests/InkWell.Infrastructure.Tests/Privacy/DraftingPrivacyTests.cs` — the raw DB file contains no plaintext prose or image bytes, and drafting produces zero network egress (FR-016, FR-017, SC-002)
 
 ### Implementation for User Story 1
@@ -198,17 +257,17 @@ reopen the app, and confirm all content and ordering are preserved.
 - [X] T059 [US1] Implement `ManuscriptUseCases` (List/Create/Rename/Delete/Get) in `src/InkWell.Application/UseCases/ManuscriptUseCases.cs`
 - [X] T060 [US1] Implement `ChapterUseCases` (Add/Rename/Reorder/Delete/GetContent) in `src/InkWell.Application/UseCases/ChapterUseCases.cs`
 - [X] T061 [US1] Implement `AutoSaveCoordinator` in `src/InkWell.Application/UseCases/AutoSaveCoordinator.cs` — ~0.5–2 s debounce, `FlushNow`, prose `WordCount` recompute, single transaction per commit, all off the UI thread (FR-004, SC-003)
-- [X] T062 [US1] Implement the JS→C# bridge handlers `contentChanged`, `flushNow`, `insertImageRequested`, and `imageMissingAltText` in `src/InkWell.Maui/Controls/EditorBridge.cs`
-- [X] T063 [US1] Implement the C#→JS calls `loadChapter` and `focusEditor` with one CodeMirror instance per chapter in `src/InkWell.Maui/Controls/EditorHostView.cs` and `src/InkWell.Maui/Resources/Raw/wwwroot/editor.js`
+- [X] T062 [US1] Implement the JS→C# bridge handlers `editorReady`, `contentChanged`, `flushNow`, `insertImageRequested`, `imageMissingAltText`, and `toggleDistractionFree` in the message switch of `src/InkWell.Presentation/Controls/EditorHostView.cs`, with the readiness handshake gating every host→editor send and a `BridgeFailed` timeout when the bridge never comes up (research.md §5.4)
+- [X] T063 [US1] Implement the C#→JS calls `loadChapter` and `focusEditor` with one CodeMirror instance per chapter in `src/InkWell.Presentation/Controls/EditorHostView.cs` and `src/InkWell.Maui/Resources/Raw/wwwroot/editor.js`
 - [X] T064 [US1] Implement the Obsidian-style live-preview decoration layer (hide markdown tokens, render inline formatting and images, keep the cursor line raw, keep underlying text in the accessibility tree) in `src/InkWell.Maui/Resources/Raw/wwwroot/live-preview.js`
-- [X] T065 [P] [US1] Implement `LibraryView.xaml` + `LibraryViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Maui/ViewModels/` — list, create, rename, confirmed delete, and empty-state guidance
-- [X] T066 [P] [US1] Implement `ManuscriptShellView.xaml` + `ManuscriptShellViewModel.cs` — chapter list with add/rename/confirmed delete and keyboard-operable reorder, plus no-chapters empty state
-- [X] T067 [US1] Implement `EditorView.xaml` + `EditorViewModel.cs` hosting `EditorHostView`, loading one chapter at a time and showing save status as text (never color alone)
-- [X] T068 [US1] Implement inline image insertion UX (pick/paste/drop, alt-text prompt, non-blocking missing-alt-text indicator) in `src/InkWell.Maui/Views/EditorView.xaml.cs` and `live-preview.js`
+- [X] T065 [P] [US1] Implement `LibraryPage.xaml` + `LibraryViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Presentation/ViewModels/` — list, create, rename, confirmed delete, and empty-state guidance
+- [X] T066 [P] [US1] Implement `ManuscriptPage.xaml` + `ManuscriptViewModel.cs` — chapter list with add/rename/confirmed delete and keyboard-operable reorder, plus no-chapters empty state
+- [X] T067 [US1] Implement `EditorPage.xaml` + `EditorViewModel.cs` hosting `EditorHostView`, loading one chapter at a time and showing save status as text (never color alone)
+- [X] T068 [US1] Implement inline image insertion UX (pick/paste/drop, alt-text prompt, non-blocking missing-alt-text indicator) in `src/InkWell.Maui/Views/EditorPage.xaml.cs` and `live-preview.js`
 - [X] T069 [US1] Implement app-lifecycle flush and WAL checkpoint on sleep/close in `src/InkWell.Maui/App.xaml.cs` and `src/InkWell.Infrastructure/Persistence/SqlCipherConnectionFactory.cs`
-- [ ] T070 [US1] Implement the native MAUI `Editor` accessibility-mode fallback (plain markdown source, screen-reader native) with a settings toggle in `src/InkWell.Maui/Controls/AccessibleEditorFallbackView.xaml` (research.md §1)
-- [ ] T071 [US1] Verify WCAG 2.1 AA compliance for US1 (keyboard-only completion, screen reader, contrast) and fix any gaps found by T054
-- [ ] T072 [US1] Verify US1 end-to-end with networking fully disabled and confirm encryption at rest, per quickstart.md §US1 steps 1–6 (FR-006, SC-002)
+- [X] T070 [US1] Implement the native MAUI `Editor` accessibility-mode fallback (plain markdown source, screen-reader native) as a second `IEditorHost` implementation in `src/InkWell.Presentation/Controls/AccessibleEditorFallbackView.cs`, with a settings toggle selecting it in place of `EditorHostView` (research.md §1)
+- [ ] T071 [US1] Verify WCAG 2.1 AA compliance for US1 on a device (keyboard-only completion incl. chapter reorder, screen-reader structure announcements, AA contrast) across `src/InkWell.Maui/Views/LibraryPage.xaml`, `Views/ManuscriptPage.xaml`, and `Views/EditorPage.xaml`, and fix gaps found by T054
+- [ ] T072 [US1] Verify US1 end-to-end on a device with networking fully disabled and confirm encryption at rest, per `specs/001-manuscript-drafting/quickstart.md` §US1 steps 1–6 (FR-006, SC-002)
 
 **Checkpoint**: User Story 1 is fully functional, testable, accessible, and privacy-compliant — this is the MVP
 
@@ -232,11 +291,11 @@ and the text is still fully editable, then exit and confirm the full interface r
 ### Implementation for User Story 2
 
 - [X] T077 [US2] Implement the `setDistractionFree` JS handler and the chrome-hidden layout in `src/InkWell.Maui/Resources/Raw/wwwroot/editor.js` and `styles.css` (editing area fills available space)
-- [X] T078 [US2] Add distraction-free state to `src/InkWell.Maui/ViewModels/EditorViewModel.cs` and hide navigation, panels, and non-essential toolbars in `src/InkWell.Maui/Views/EditorView.xaml`, leaving an unobtrusive exit control (FR-007)
-- [X] T079 [US2] Bind the enter/exit keyboard shortcut across Windows, Mac Catalyst, iOS, and Android in `src/InkWell.Maui/Views/EditorView.xaml.cs` (FR-008)
-- [X] T080 [US2] Send `flushNow` on every distraction-free toggle and verify autosave behaves identically in the mode, in `src/InkWell.Maui/Controls/EditorBridge.cs`
-- [X] T081 [US2] Preserve and restore cursor/selection across the transition via `focusEditor` in `src/InkWell.Maui/Resources/Raw/wwwroot/editor.js` and `src/InkWell.Maui/Controls/EditorHostView.cs`
-- [ ] T082 [US2] Verify WCAG 2.1 AA compliance and privacy parity for US2 and fix gaps found by T075
+- [X] T078 [US2] Add distraction-free state to `src/InkWell.Presentation/ViewModels/EditorViewModel.cs` and hide navigation, panels, and non-essential toolbars in `src/InkWell.Maui/Views/EditorPage.xaml`, leaving an unobtrusive exit control (FR-007)
+- [X] T079 [US2] Bind the enter/exit keyboard shortcut across Windows, Mac Catalyst, iOS, and Android in `src/InkWell.Maui/Views/EditorPage.xaml.cs` (FR-008)
+- [X] T080 [US2] Send `flushNow` on every distraction-free toggle and verify autosave behaves identically in the mode, in `src/InkWell.Presentation/Controls/EditorHostView.cs` and `src/InkWell.Presentation/ViewModels/EditorViewModel.cs`
+- [X] T081 [US2] Preserve and restore cursor/selection across the transition via `focusEditor` in `src/InkWell.Maui/Resources/Raw/wwwroot/editor.js` and `src/InkWell.Presentation/Controls/EditorHostView.cs`
+- [ ] T082 [US2] Verify WCAG 2.1 AA compliance and privacy parity for US2 on a device (contrast and screen-reader output in focus mode) in `src/InkWell.Maui/Views/EditorPage.xaml` and `src/InkWell.Maui/Resources/Raw/wwwroot/styles.css`, and fix gaps found by T075
 
 **Checkpoint**: User Stories 1 and 2 both work independently
 
@@ -266,9 +325,9 @@ write 300 more, and confirm the goal is marked met for the day.
 - [X] T091 [P] [US3] Implement `WritingHistoryRepository` in `src/InkWell.Infrastructure/Persistence/WritingHistoryRepository.cs` (upsert today by local date, range query for history)
 - [X] T092 [US3] Implement `GoalUseCases` (`SetDailyGoal`, `ClearDailyGoal`, `GetTodayProgress`, `RecordWordsForToday`, `GetHistory`) in `src/InkWell.Application/UseCases/GoalUseCases.cs` per contracts/word-count-and-goals.md
 - [X] T093 [US3] Wire `RecordWordsForToday` into the autosave commit so chapter prose and the day's `DailyWritingRecord` upsert land in one transaction, in `src/InkWell.Application/UseCases/AutoSaveCoordinator.cs` (counts never diverge from content)
-- [X] T094 [US3] Implement `GetManuscriptWordCount` (sum of chapter counts) in `src/InkWell.Application/UseCases/ChapterUseCases.cs` and surface live chapter + manuscript counts in `src/InkWell.Maui/ViewModels/EditorViewModel.cs` with an ARIA live region announcement
-- [X] T095 [P] [US3] Implement `GoalsView.xaml` + `GoalsViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Maui/ViewModels/` — set/change/clear the target, show progress, percentage, remaining words, text status, and prior-day history
-- [ ] T096 [US3] Verify WCAG 2.1 AA compliance for US3 (no status by color alone) and manually confirm day rollover per quickstart.md §US3 step 4
+- [X] T094 [US3] Implement `GetManuscriptWordCount` (sum of chapter counts) in `src/InkWell.Application/UseCases/ChapterUseCases.cs` and surface live chapter + manuscript counts in `src/InkWell.Presentation/ViewModels/EditorViewModel.cs` with an ARIA live region announcement
+- [X] T095 [P] [US3] Implement `GoalsPage.xaml` + `GoalsViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Presentation/ViewModels/` — set/change/clear the target, show progress, percentage, remaining words, text status, and prior-day history
+- [ ] T096 [US3] Verify WCAG 2.1 AA compliance for US3 on a device (contrast, and goal status carried by text rather than color alone) in `src/InkWell.Maui/Views/GoalsPage.xaml` and `src/InkWell.Maui/Resources/Styles/Colors.xaml`; day rollover is already covered automatically by T083 and T086 against an advanceable clock
 
 **Checkpoint**: User Stories 1, 2, and 3 all work independently
 
@@ -285,7 +344,7 @@ manuscript, close and reopen the app, and confirm both are retained and viewable
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
 - [X] T097 [P] [US4] Contract tests in `tests/InkWell.Infrastructure.Tests/Persistence/ReferenceRepositoryTests.cs` — create→list→reopen-store round-trip for characters and plot threads, edits persist, delete removes only the target row and leaves the manuscript intact (contracts/reference-service.md)
-- [ ] T098 [P] [US4] Unit tests for reference use cases in `tests/InkWell.Application.Tests/UseCases/ReferenceUseCasesTests.cs` — name/title validation (1–200, trimmed), freeform notes, `NotFound` handling
+- [X] T098 [P] [US4] Unit tests for reference use cases in `tests/InkWell.Application.Tests/UseCases/ReferenceUseCasesTests.cs` — name/title validation (1–200, trimmed), freeform notes, `NotFound` handling
 - [X] T099 [P] [US4] Integration test of the US4 journey in `tests/InkWell.Maui.UiTests/UserStory4Tests.cs` — create both, open the reference while drafting and return to the exact caret, edit one, confirm-delete another, restart and verify retention
 - [X] T100 [P] [US4] Accessibility test in `tests/InkWell.Maui.UiTests/Accessibility/UserStory4AccessibilityTests.cs` — keyboard-only CRUD and screen-reader list semantics for both reference types
 
@@ -293,10 +352,10 @@ manuscript, close and reopen the app, and confirm both are retained and viewable
 
 - [X] T101 [US4] Implement `ReferenceRepository` (characters and plot threads) in `src/InkWell.Infrastructure/Persistence/ReferenceRepository.cs` with name-sorted listing
 - [X] T102 [US4] Implement `ReferenceUseCases` (create/list/update/delete for both types) in `src/InkWell.Application/UseCases/ReferenceUseCases.cs`
-- [X] T103 [P] [US4] Implement `CharactersView.xaml` + `CharactersViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Maui/ViewModels/` with confirmed delete (FR-005)
-- [X] T104 [P] [US4] Implement `PlotThreadsView.xaml` + `PlotThreadsViewModel.cs` with confirmed delete
-- [X] T105 [US4] Implement the reference panel presentation that opens alongside/over the editor and restores the exact caret on close, in `src/InkWell.Maui/Views/EditorView.xaml.cs` and `src/InkWell.Maui/Controls/EditorHostView.cs` (FR-015)
-- [ ] T106 [US4] Verify WCAG 2.1 AA compliance for US4 and fix gaps found by T100
+- [X] T103 [P] [US4] Implement `CharactersPage.xaml` + `CharactersViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Presentation/ViewModels/` with confirmed delete (FR-005)
+- [X] T104 [P] [US4] Implement `PlotThreadsPage.xaml` + `PlotThreadsViewModel.cs` with confirmed delete
+- [X] T105 [US4] Implement the reference panel presentation that opens alongside/over the editor and restores the exact caret on close, in `src/InkWell.Maui/Views/EditorPage.xaml.cs` and `src/InkWell.Presentation/Controls/EditorHostView.cs` (FR-015)
+- [ ] T106 [US4] Verify WCAG 2.1 AA compliance for US4 on a device (contrast and screen-reader list semantics) in `src/InkWell.Maui/Views/CharactersPage.xaml` and `src/InkWell.Maui/Views/PlotThreadsPage.xaml`, and fix gaps found by T100
 
 **Checkpoint**: All four user stories are independently functional
 
@@ -308,19 +367,19 @@ manuscript, close and reopen the app, and confirm both are retained and viewable
 required by FR-016, FR-017, FR-018, SC-008, and SC-009. Applies across all stories.
 
 - [ ] T107 Spike: verify PdfSharp 6 renders text with a custom `IFontResolver` and bundled TTFs on a real iOS and Android device; record the outcome in `specs/001-manuscript-drafting/research.md` §3 (highest export risk)
-- [ ] T108 [P] Contract tests for EPUB export in `tests/InkWell.Infrastructure.Tests/Export/EpubExporterTests.cs` — output validates with EPUBCheck, `mimetype` is the first stored (uncompressed) entry, every source image is embedded under `images/`, at both whole-manuscript and single-chapter granularity (SC-009)
-- [ ] T109 [P] Contract tests for PDF export in `tests/InkWell.Infrastructure.Tests/Export/PdfExporterTests.cs` — the file opens, every source image is embedded, at both granularities
-- [ ] T110 [P] Tests for data controls in `tests/InkWell.Infrastructure.Tests/Persistence/DataControlsTests.cs` — `GetAllStoredData` inventories every entity type, `DeleteManuscriptData` cascades, `DeleteAllData` leaves no recoverable content and removes the key (SC-008)
-- [ ] T111 [P] Privacy test in `tests/InkWell.Infrastructure.Tests/Privacy/ExportPrivacyTests.cs` — export produces zero network egress and writes only to the caller-supplied destination (FR-017)
-- [ ] T112 Add XHTML post-processing (self-close void elements, add the root namespace) to `src/InkWell.Infrastructure/Markdown/MarkdownService.cs` so Markdig output is well-formed for EPUB
-- [ ] T113 Implement `EpubExporter` in `src/InkWell.Infrastructure/Export/EpubExporter.cs` — `ZipArchive` with stored-first `mimetype`, `META-INF/container.xml`, `.opf` manifest, EPUB3 `nav.xhtml` + `toc.ncx`, one XHTML per chapter, image bytes extracted to `images/` with `<img src>` rewritten to relative paths
-- [ ] T114 Implement `PdfExporter` in `src/InkWell.Infrastructure/Export/PdfExporter.cs` — walk the Markdig AST into MigraDoc elements (headings to styled paragraphs, image nodes via `AddImage` from embedded bytes)
-- [ ] T115 Implement the bundled-TTF `IFontResolver` in `src/InkWell.Infrastructure/Export/BundledFontResolver.cs` and add the serif body + heading fonts to `src/InkWell.Maui/Resources/Fonts/`
-- [ ] T116 Implement `ExportService` (`ExportManuscript`, `ExportChapter`, `ExportManuscriptAllChapters`) in `src/InkWell.Infrastructure/Export/ExportService.cs` per contracts/export-service.md
-- [ ] T117 Wire `CommunityToolkit.Maui` `FileSaver`/`FolderPicker` destination selection and off-UI-thread export with progress and error handling in `src/InkWell.Maui/ViewModels/ExportViewModel.cs` and the editor/library export entry points
-- [ ] T118 Implement `DataControlsView.xaml` + `DataControlsViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Maui/ViewModels/` — view all stored data, delete a manuscript, delete all app data, each behind a confirmation (FR-005, FR-018)
-- [ ] T119 Implement `DeleteAllData` (drop every table and remove the encryption key from `SecureStorage`) in `src/InkWell.Infrastructure/Persistence/DataControlsRepository.cs` (SC-008)
-- [ ] T120 Add EPUBCheck validation to the test pipeline in `tests/InkWell.Infrastructure.Tests/Export/` so exported EPUBs are validated on every run
+- [X] T108 [P] Contract tests for EPUB export in `tests/InkWell.Infrastructure.Tests/Export/EpubExporterTests.cs` — output validates with EPUBCheck, `mimetype` is the first stored (uncompressed) entry, every source image is embedded under `images/`, at both whole-manuscript and single-chapter granularity (SC-009)
+- [X] T109 [P] Contract tests for PDF export in `tests/InkWell.Infrastructure.Tests/Export/PdfExporterTests.cs` — the file opens, every source image is embedded, at both granularities
+- [X] T110 [P] Tests for data controls in `tests/InkWell.Infrastructure.Tests/Persistence/DataControlsTests.cs` — `GetAllStoredData` inventories every entity type, `DeleteManuscriptData` cascades, `DeleteAllData` leaves no recoverable content and removes the key (SC-008)
+- [X] T111 [P] Privacy test in `tests/InkWell.Infrastructure.Tests/Privacy/ExportPrivacyTests.cs` — export produces zero network egress and writes only to the caller-supplied destination (FR-017)
+- [X] T112 Add XHTML post-processing (self-close void elements, add the root namespace) to `src/InkWell.Infrastructure/Markdown/MarkdownService.cs` so Markdig output is well-formed for EPUB
+- [X] T113 Implement `EpubExporter` in `src/InkWell.Infrastructure/Export/EpubExporter.cs` — `ZipArchive` with stored-first `mimetype`, `META-INF/container.xml`, `.opf` manifest, EPUB3 `nav.xhtml` + `toc.ncx`, one XHTML per chapter, image bytes extracted to `images/` with `<img src>` rewritten to relative paths
+- [X] T114 Implement `PdfExporter` in `src/InkWell.Infrastructure/Export/PdfExporter.cs` — walk the Markdig AST into MigraDoc elements (headings to styled paragraphs, image nodes via `AddImage` from embedded bytes)
+- [X] T115 Implement the bundled-TTF `IFontResolver` in `src/InkWell.Infrastructure/Export/BundledFontResolver.cs` and add the serif body + heading fonts to `src/InkWell.Maui/Resources/Fonts/`
+- [X] T116 Implement `ExportService` (`ExportManuscript`, `ExportChapter`, `ExportManuscriptAllChapters`) in `src/InkWell.Infrastructure/Export/ExportService.cs` per contracts/export-service.md
+- [X] T117 Wire `CommunityToolkit.Maui` `FileSaver`/`FolderPicker` destination selection and off-UI-thread export with progress and error handling in `src/InkWell.Presentation/ViewModels/ExportViewModel.cs`, reached from `src/InkWell.Maui/Views/LibraryPage.xaml` and `src/InkWell.Maui/Views/EditorPage.xaml`, with the picker itself behind a port in `src/InkWell.Presentation/Services/PlatformStorageAdapters.cs` so the ViewModel stays testable
+- [X] T118 Implement `DataControlsPage.xaml` + `DataControlsViewModel.cs` in `src/InkWell.Maui/Views/` and `src/InkWell.Presentation/ViewModels/` — view all stored data, delete a manuscript, delete all app data, each behind a confirmation (FR-005, FR-018)
+- [X] T119 Implement `DeleteAllData` (drop every table and remove the encryption key from `SecureStorage`) in `src/InkWell.Infrastructure/Persistence/DataControlsRepository.cs` (SC-008)
+- [X] T120 Add EPUBCheck validation to the test pipeline in `tests/InkWell.Infrastructure.Tests/Export/` so exported EPUBs are validated on every run
 
 ---
 
@@ -328,18 +387,18 @@ required by FR-016, FR-017, FR-018, SC-008, and SC-009. Applies across all stori
 
 **Purpose**: Performance validation, documentation, and final compliance sweeps across all stories
 
-- [ ] T121 [P] Implement the large-manuscript seed generator (150,000+ words across 50+ chapters) in `tests/InkWell.Maui.UiTests/Performance/LargeManuscriptSeeder.cs`
-- [ ] T122 [P] Performance test in `tests/InkWell.Maui.UiTests/Performance/LargeManuscriptPerformanceTests.cs` — opening a chapter and typing stay responsive with keystroke feedback within the 16 ms target against the seeded manuscript (SC-004)
-- [ ] T123 [P] Audit and eliminate blocking I/O on the UI thread across repositories, autosave, and export in `src/InkWell.Infrastructure/` and `src/InkWell.Maui/ViewModels/`
-- [ ] T124 [P] Implement empty-state guidance for no manuscripts, no chapters, and an empty chapter in `src/InkWell.Maui/Views/LibraryView.xaml`, `ManuscriptShellView.xaml`, and `EditorView.xaml`
-- [ ] T125 [P] Implement user-facing error handling and messaging for missing encryption key, unreadable database, and export failure in `src/InkWell.Maui/Services/ErrorPresenter.cs`
-- [ ] T126 [P] Add XML doc comments to all public APIs across `src/` and enable auto-generated API documentation output (Constitution §VI)
-- [ ] T127 [P] Write user-facing help documentation for the editor, goals, and export in `docs/help/` and update every project `README.md`
-- [ ] T128 [P] Add explanatory code comments to the live-preview decoration layer (`wwwroot/live-preview.js`), the key/crypto bootstrap (`Security/KeyStore.cs`), and the autosave durability logic (`AutoSaveCoordinator.cs`)
+- [X] T121 [P] Implement the large-manuscript seed generator (150,000+ words across 50+ chapters) in `tests/InkWell.Maui.UiTests/Performance/LargeManuscriptSeeder.cs`
+- [X] T122 [P] Performance test in `tests/InkWell.Maui.UiTests/Performance/LargeManuscriptPerformanceTests.cs` — opening a chapter and typing stay responsive with keystroke feedback within the 16 ms target against the seeded manuscript (SC-004)
+- [X] T123 [P] Audit and eliminate blocking I/O on the UI thread across repositories, autosave, and export in `src/InkWell.Infrastructure/` and `src/InkWell.Presentation/ViewModels/`
+- [X] T124 [P] Implement empty-state guidance for no manuscripts, no chapters, and an empty chapter in `src/InkWell.Maui/Views/LibraryPage.xaml`, `ManuscriptPage.xaml`, and `EditorPage.xaml`
+- [X] T125 [P] Implement user-facing error handling and messaging for missing encryption key, unreadable database, and export failure in `src/InkWell.Presentation/Services/ErrorPresenter.cs`
+- [X] T126 [P] Add XML doc comments to all public APIs across `src/` and enable auto-generated API documentation output (Constitution §VI)
+- [X] T127 [P] Write user-facing help documentation for the editor, goals, and export in `docs/help/` and update every project `README.md`
+- [X] T128 [P] Add explanatory code comments to the live-preview decoration layer (`wwwroot/live-preview.js`), the key/crypto bootstrap (`Security/KeyStore.cs`), and the autosave durability logic (`AutoSaveCoordinator.cs`)
 - [ ] T129 Run the cross-platform WebView QA matrix (contenteditable, IME, paste) on WebView2, WKWebView (iOS + Mac Catalyst), and Android WebView; record results in `specs/001-manuscript-drafting/research.md` §1
-- [ ] T130 Run a full accessibility sweep across every view (contrast, screen reader, keyboard-only) including the native-`Editor` fallback, and fix all findings (SC-007)
-- [ ] T131 Execute every scenario in `specs/001-manuscript-drafting/quickstart.md` and check off its Definition of Done
-- [ ] T132 Final code cleanup and refactoring pass across `src/` with all tests green
+- [ ] T130 Run a full accessibility sweep (contrast, screen reader, keyboard-only) across every page in `src/InkWell.Maui/Views/`, the editor DOM in `src/InkWell.Maui/Resources/Raw/wwwroot/`, and the native-`Editor` fallback from T070, and fix all findings (SC-007)
+- [X] T131 Execute every scenario in `specs/001-manuscript-drafting/quickstart.md` and check off its Definition of Done
+- [X] T132 Final code cleanup and refactoring pass across `src/` with all tests green
 
 ---
 

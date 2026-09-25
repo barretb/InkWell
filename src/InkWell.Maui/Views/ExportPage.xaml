@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.ExportPage"
+             x:DataType="vm:ExportViewModel"
+             Title="Export">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Style="{StaticResource HeadingLabel}"
+                   Text="{Binding ManuscriptTitle, StringFormat='Export “{0}”'}"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <Label Text="Every image in your chapters is embedded in the exported file, so the book stands on its own. You choose where it is saved — this is the only way anything leaves this device." />
+
+            <!-- Whole manuscript, one file -->
+            <Border Padding="16" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource HeadingLabel}"
+                           FontSize="17"
+                           Text="The whole manuscript"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="EPUB"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportManuscriptEpubCommand}"
+                                SemanticProperties.Hint="Saves the whole manuscript as one EPUB file, in a place you choose." />
+                        <Button Text="PDF"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportManuscriptPdfCommand}"
+                                SemanticProperties.Hint="Saves the whole manuscript as one PDF file, in a place you choose." />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- One file per chapter -->
+            <Border Padding="16" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource HeadingLabel}"
+                           FontSize="17"
+                           Text="One file per chapter"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <Label Style="{StaticResource StatusLabel}"
+                           Text="Files are numbered so they stay in reading order." />
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="EPUB"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportEachChapterEpubCommand}"
+                                SemanticProperties.Hint="Saves each chapter as its own EPUB file, into a folder you choose." />
+                        <Button Text="PDF"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportEachChapterPdfCommand}"
+                                SemanticProperties.Hint="Saves each chapter as its own PDF file, into a folder you choose." />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Just the chapter the writer came from, when they came from one -->
+            <Border Padding="16" StrokeShape="RoundRectangle 8"
+                    IsVisible="{Binding HasChapter}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource HeadingLabel}"
+                           FontSize="17"
+                           Text="{Binding ChapterTitle, StringFormat='Just “{0}”'}"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="EPUB"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportChapterEpubCommand}"
+                                SemanticProperties.Hint="Saves this one chapter as an EPUB file." />
+                        <Button Text="PDF"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportChapterPdfCommand}"
+                                SemanticProperties.Hint="Saves this one chapter as a PDF file." />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Start" />
+
+            <!--
+                The outcome in words — where the file went, how many images it carries — because a
+                spinner that stops is not a report (FR-019).
+            -->
+            <Label Style="{StaticResource StatusLabel}"
+                   Text="{Binding StatusMessage}"
+                   SemanticProperties.Description="{Binding StatusMessage}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

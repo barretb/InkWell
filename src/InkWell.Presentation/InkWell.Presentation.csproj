@@ -33,6 +33,9 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" />
 		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<!-- FileSaver and FolderPicker, behind IFileDestinationPicker: the only way an export
+		     destination is ever chosen (FR-017). -->
+		<PackageReference Include="CommunityToolkit.Maui" />
 	</ItemGroup>
 
 </Project>

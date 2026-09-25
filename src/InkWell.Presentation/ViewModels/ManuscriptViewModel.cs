@@ -133,6 +133,15 @@ public sealed partial class ManuscriptViewModel : BaseViewModel, IQueryAttributa
             [Routes.ManuscriptIdParameter] = ManuscriptId,
         });
 
+    /// <summary>Opens the export screen for this manuscript (FR-018).</summary>
+    [RelayCommand]
+    public Task ExportAsync()
+        => _navigation.GoToAsync(Routes.Export, new Dictionary<string, object>
+        {
+            [Routes.ManuscriptIdParameter] = ManuscriptId,
+            [Routes.ManuscriptTitleParameter] = Title,
+        });
+
     /// <summary>Renames a chapter.</summary>
     [RelayCommand]
     public async Task RenameChapterAsync((Guid Id, string Title) request)

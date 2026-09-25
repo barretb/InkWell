@@ -298,3 +298,43 @@ than as a native accelerator, because a focused WebView consumes key events befo
 It is raised back to the host as `IEditorHost.DistractionFreeToggleRequested`, so the shortcut and
 the visible button converge on one method in `EditorViewModel` — FR-008's "both routes behave
 identically" holds by construction, not by keeping two implementations in step.
+
+### 5.7 EPUB output validates against EPUBCheck — **verified** (T120)
+
+Exported books were checked with **EPUBCheck 5.3.0** (`--failonwarnings`, OpenJDK 11) and pass with
+zero errors, warnings, or fatals, at both granularities: a whole two-chapter manuscript with three
+embedded images, a single-chapter export, and a chapter using headings, emphasis, a block quote, a
+list, a thematic break, a hard line break, a link, and inline code.
+
+The validator harness itself was checked against a deliberately corrupt file first, which EPUBCheck
+rejected with `PKG-003`/`PKG-008` — so the passes above are the tool agreeing, not the harness
+failing open.
+
+EPUBCheck is a Java tool and is not vendored in the repository.
+`tests/InkWell.Infrastructure.Tests/Export/EpubCheckValidator.cs` finds it through the
+`EPUBCHECK_JAR` environment variable or at `tools/epubcheck/epubcheck.jar`. When it is absent the
+tests say so in their output rather than passing quietly, and setting `INKWELL_REQUIRE_EPUBCHECK=1`
+— which CI should do — turns its absence into a failure, so the validation step cannot silently go
+missing.
+
+### 5.8 PDF export: font resolver verified on Windows, devices outstanding (T115, part of T107)
+
+`BundledFontResolver` embeds the two OpenSans faces as assembly resources and hands their bytes to
+PDFsharp. Verified on Windows: the faces load from the manifest, every family/bold/italic
+combination resolves rather than returning null, and every `/FontDescriptor` in a rendered document
+carries a `/FontFile2` — the font program is genuinely embedded, so a reader's machine does not need
+to own the typeface.
+
+Two things are deliberately recorded as not settled:
+
+- **The device half of T107 is still open.** That PDFsharp accepts the bytes on Windows does not
+  prove the iOS and Android rasterisers do, which is the actual risk this section named. It needs a
+  device or simulator.
+- **The bundled faces are sans-serif.** The plan called for a serif body face for a novel; the two
+  fonts already in the project are OpenSans Regular and Semibold, and no serif face was added rather
+  than committing a font whose licence had not been reviewed. The resolver maps family names to
+  faces, so substituting a serif pair is a two-file change with no code change.
+
+The fonts moved from `src/InkWell.Maui/Resources/Fonts/` to `src/InkWell.Infrastructure/Export/Fonts/`
+and are embedded there; the app project links them back for its own `MauiFont` typography. The
+dependency points inward, and there is one copy of each file.

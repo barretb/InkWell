@@ -21,7 +21,8 @@ public sealed class DailyGoalRepository : IDailyGoalRepository
     /// <inheritdoc />
     public async Task<DailyGoal?> GetAsync(Guid manuscriptId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<DailyGoalRow> rows = await connection
             .QueryAsync<DailyGoalRow>("SELECT * FROM DailyGoal WHERE ManuscriptId = ?", manuscriptId.ToString())
             .ConfigureAwait(false);
@@ -36,7 +37,8 @@ public sealed class DailyGoalRepository : IDailyGoalRepository
         DateTimeOffset timestamp,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         long ticks = RowConversions.ToTicks(timestamp);
 
         DailyGoal? result = null;
@@ -87,7 +89,8 @@ public sealed class DailyGoalRepository : IDailyGoalRepository
         DateTimeOffset timestamp,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         // Deactivated, not deleted. The row keeps the target the writer last chose so that turning
         // tracking back on does not make them retype it, and the writing history — which snapshots

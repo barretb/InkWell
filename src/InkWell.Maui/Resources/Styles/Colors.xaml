@@ -33,8 +33,22 @@
     <Color x:Key="DangerLight">#A32020</Color>
     <Color x:Key="DangerDark">#F58585</Color>
 
+    <!--
+        Two border tokens, because WCAG 2.1 SC 1.4.11 applies to one of them and not the other.
+
+        Border* is a decorative hairline — the stroke around a card, a divider between rows. Nothing
+        about the interface is only knowable from it, so it is exempt from the 3:1 non-text ratio and
+        is kept light enough to read as a seam rather than a rule.
+
+        ControlBorder* outlines a control whose boundary is the only thing identifying it: the
+        transparent-background secondary and danger buttons, and text entries. Remove that stroke and
+        the writer cannot see where the control is, which is exactly the case 1.4.11 covers, so these
+        clear 3:1 against the surface behind them and are asserted to in UserStory1AccessibilityTests.
+    -->
     <Color x:Key="BorderLight">#D5D8DC</Color>
     <Color x:Key="BorderDark">#39414A</Color>
+    <Color x:Key="ControlBorderLight">#78828C</Color>
+    <Color x:Key="ControlBorderDark">#7C8894</Color>
     <Color x:Key="FocusRingLight">#1F5B8F</Color>
     <Color x:Key="FocusRingDark">#79B6E8</Color>
 

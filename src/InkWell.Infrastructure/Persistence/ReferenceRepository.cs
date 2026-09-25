@@ -29,7 +29,8 @@ public sealed class ReferenceRepository : IReferenceRepository
         Guid manuscriptId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<CharacterRow> rows = await connection.QueryAsync<CharacterRow>(
             "SELECT * FROM Character WHERE ManuscriptId = ? ORDER BY Name COLLATE NOCASE",
             manuscriptId.ToString()).ConfigureAwait(false);
@@ -40,7 +41,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     /// <inheritdoc />
     public async Task<Character?> GetCharacterAsync(Guid characterId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<CharacterRow> rows = await connection
             .QueryAsync<CharacterRow>("SELECT * FROM Character WHERE Id = ?", characterId.ToString())
             .ConfigureAwait(false);
@@ -52,7 +54,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     public async Task AddCharacterAsync(Character character, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(character);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         await connection.ExecuteAsync(
             "INSERT INTO Character (Id, ManuscriptId, Name, Notes, CreatedAt, ModifiedAt) VALUES (?, ?, ?, ?, ?, ?)",
@@ -72,7 +75,8 @@ public sealed class ReferenceRepository : IReferenceRepository
         DateTimeOffset modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection.ExecuteAsync(
             "UPDATE Character SET Name = ?, Notes = ?, ModifiedAt = ? WHERE Id = ?",
             name, notes, RowConversions.ToTicks(modifiedAt), characterId.ToString()).ConfigureAwait(false);
@@ -83,7 +87,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     /// <inheritdoc />
     public async Task<bool> DeleteCharacterAsync(Guid characterId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection
             .ExecuteAsync("DELETE FROM Character WHERE Id = ?", characterId.ToString())
             .ConfigureAwait(false);
@@ -96,7 +101,8 @@ public sealed class ReferenceRepository : IReferenceRepository
         Guid manuscriptId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<PlotThreadRow> rows = await connection.QueryAsync<PlotThreadRow>(
             "SELECT * FROM PlotThread WHERE ManuscriptId = ? ORDER BY Title COLLATE NOCASE",
             manuscriptId.ToString()).ConfigureAwait(false);
@@ -107,7 +113,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     /// <inheritdoc />
     public async Task<PlotThread?> GetPlotThreadAsync(Guid plotThreadId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<PlotThreadRow> rows = await connection
             .QueryAsync<PlotThreadRow>("SELECT * FROM PlotThread WHERE Id = ?", plotThreadId.ToString())
             .ConfigureAwait(false);
@@ -119,7 +126,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     public async Task AddPlotThreadAsync(PlotThread plotThread, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plotThread);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         await connection.ExecuteAsync(
             "INSERT INTO PlotThread (Id, ManuscriptId, Title, Notes, CreatedAt, ModifiedAt) VALUES (?, ?, ?, ?, ?, ?)",
@@ -139,7 +147,8 @@ public sealed class ReferenceRepository : IReferenceRepository
         DateTimeOffset modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection.ExecuteAsync(
             "UPDATE PlotThread SET Title = ?, Notes = ?, ModifiedAt = ? WHERE Id = ?",
             title, notes, RowConversions.ToTicks(modifiedAt), plotThreadId.ToString()).ConfigureAwait(false);
@@ -150,7 +159,8 @@ public sealed class ReferenceRepository : IReferenceRepository
     /// <inheritdoc />
     public async Task<bool> DeletePlotThreadAsync(Guid plotThreadId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection
             .ExecuteAsync("DELETE FROM PlotThread WHERE Id = ?", plotThreadId.ToString())
             .ConfigureAwait(false);

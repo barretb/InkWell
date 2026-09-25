@@ -76,3 +76,7 @@ ehthumbs.db
 Desktop.ini
 *.tmp
 *.swp
+
+# EPUBCheck, if a developer drops the jar in for local export validation (T120).
+# It is a Java tool, not vendored; CI supplies it via EPUBCHECK_JAR.
+tools/epubcheck/

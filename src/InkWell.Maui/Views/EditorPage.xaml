@@ -15,7 +15,7 @@
         <Grid Grid.Row="0"
               x:Name="ChromeRow"
               Padding="16,10"
-              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+              ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="8"
               IsVisible="{Binding IsDistractionFree, Converter={StaticResource Not}}">
 
@@ -50,9 +50,19 @@
                     Style="{StaticResource SecondaryButton}"
                     Command="{Binding ToggleDistractionFreeCommand}"
                     SemanticProperties.Hint="Hides everything except your text. Press Escape to leave." />
+
+            <Button Grid.Column="5"
+                    x:Name="EditorModeButton"
+                    Style="{StaticResource SecondaryButton}"
+                    Clicked="OnToggleEditorModeClicked" />
         </Grid>
 
-        <controls:EditorHostView x:Name="Editor" Grid.Row="1" />
+        <!--
+            The editing surface is chosen at runtime, so the slot is empty in XAML and filled by the
+            code-behind: the live-preview WebView by default, or the native accessibility-mode
+            Editor when the writer has asked for it (research.md §1).
+        -->
+        <ContentView x:Name="EditorSlot" Grid.Row="1" />
 
         <!--
             The one control that stays visible in focus mode, so the writer always has a way out

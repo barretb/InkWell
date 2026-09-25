@@ -54,7 +54,8 @@
     <Style x:Key="SecondaryButton" TargetType="Button">
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
-        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+        <!-- Transparent background: this stroke is the only thing that says "button" (SC 1.4.11). -->
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource ControlBorderLight}, Dark={StaticResource ControlBorderDark}}" />
         <Setter Property="BorderWidth" Value="1" />
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
         <Setter Property="FontSize" Value="15" />
@@ -75,6 +76,11 @@
         <Setter Property="FontSize" Value="15" />
     </Style>
 
+    <!--
+        A card. Its stroke is decoration around content that is already legible, so it uses the soft
+        Border token rather than the 3:1 control token (SC 1.4.11 covers boundaries that carry
+        information; this one does not).
+    -->
     <Style TargetType="Border">
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
         <Setter Property="StrokeThickness" Value="1" />
