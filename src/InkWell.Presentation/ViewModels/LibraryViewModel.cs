@@ -52,17 +52,34 @@ public sealed partial class LibraryViewModel : BaseViewModel
     public bool IsEmpty => Manuscripts.Count == 0 && !IsBusy;
 
     /// <summary>Loads the library.</summary>
+    /// <remarks>
+    /// This is the first thing that touches the encrypted store after launch, so it is also where a
+    /// store that will not open is met. Guarded rather than left to propagate: an unreadable
+    /// database or an unreachable Keychain would otherwise close the app on startup, which tells a
+    /// writer nothing except that their novel might be gone (research.md §2).
+    /// </remarks>
     [RelayCommand]
     public async Task LoadAsync()
     {
         IsBusy = true;
         try
         {
-            IReadOnlyList<ManuscriptSummary> all = await _manuscripts.ListAsync().ConfigureAwait(true);
-            Manuscripts.Clear();
-            foreach (ManuscriptSummary summary in all)
+            bool loaded = await StoreFailure.GuardAsync(
+                async () =>
+                {
+                    IReadOnlyList<ManuscriptSummary> all = await _manuscripts.ListAsync().ConfigureAwait(true);
+                    Manuscripts.Clear();
+                    foreach (ManuscriptSummary summary in all)
+                    {
+                        Manuscripts.Add(summary);
+                    }
+                },
+                _errors).ConfigureAwait(true);
+
+            if (!loaded)
             {
-                Manuscripts.Add(summary);
+                StatusMessage = "InkWell could not open your writing. Nothing has been lost.";
+                return;
             }
 
             StatusMessage = Manuscripts.Count switch
@@ -104,6 +121,28 @@ public sealed partial class LibraryViewModel : BaseViewModel
             {
                 [Routes.ManuscriptIdParameter] = manuscript.Id,
             });
+
+    /// <summary>Opens the export screen for a manuscript (FR-018).</summary>
+    [RelayCommand]
+    public Task ExportAsync(ManuscriptSummary? manuscript)
+        => manuscript is null
+            ? Task.CompletedTask
+            : _navigation.GoToAsync(Routes.Export, new Dictionary<string, object>
+            {
+                [Routes.ManuscriptIdParameter] = manuscript.Id,
+                [Routes.ManuscriptTitleParameter] = manuscript.Title,
+            });
+
+    /// <summary>
+    /// Opens the "your data" screen, where everything stored is listed and can be removed
+    /// (FR-018, SC-008).
+    /// </summary>
+    /// <remarks>
+    /// Reached from the library because it is about the app as a whole rather than any one
+    /// manuscript, and because a writer looking for it will start at the top.
+    /// </remarks>
+    [RelayCommand]
+    public Task OpenDataControlsAsync() => _navigation.GoToAsync(Routes.DataControls);
 
     /// <summary>Renames a manuscript.</summary>
     [RelayCommand]

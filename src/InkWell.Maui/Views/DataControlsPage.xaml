@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:dtos="clr-namespace:InkWell.Application.Abstractions.Dtos;assembly=InkWell.Application"
+             xmlns:vm="clr-namespace:InkWell.Presentation.ViewModels;assembly=InkWell.Presentation"
+             x:Class="InkWell.Maui.Views.DataControlsPage"
+             x:DataType="vm:DataControlsViewModel"
+             Title="Your data">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Style="{StaticResource HeadingLabel}"
+                   Text="Everything InkWell has stored"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <!--
+                The app's central promise, made checkable: the file, its size, and the statement
+                that nothing leaves without an export (FR-016, FR-017).
+            -->
+            <Border Padding="16" StrokeShape="RoundRectangle 8">
+                <Label Text="{Binding StorageSummary}"
+                       SemanticProperties.Description="{Binding StorageSummary}" />
+            </Border>
+
+            <Label Style="{StaticResource StatusLabel}"
+                   Text="{Binding StatusMessage}"
+                   SemanticProperties.Description="{Binding StatusMessage}" />
+
+            <!-- Empty state: guidance rather than a blank screen (spec.md edge case). -->
+            <Label IsVisible="{Binding IsEmpty}"
+                   Text="There is nothing stored yet. Once you create a manuscript, everything it holds will be listed here so you can see exactly what is on your device." />
+
+            <CollectionView ItemsSource="{Binding Manuscripts}"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dtos:ManuscriptDataInventory">
+                        <Border Padding="16" Margin="0,0,0,10" StrokeShape="RoundRectangle 8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3">
+                                    <Label Style="{StaticResource HeadingLabel}"
+                                           FontSize="17"
+                                           Text="{Binding Title}"
+                                           SemanticProperties.HeadingLevel="Level2" />
+
+                                    <!--
+                                        Every count is spelled out in text. A writer deciding
+                                        whether to delete something needs to know what it holds.
+                                    -->
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding ChapterCount, StringFormat='{0} chapters'}" />
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding WordCount, StringFormat='{0:N0} words'}" />
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding InlineImageCount, StringFormat='{0} embedded images'}" />
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding CharacterCount, StringFormat='{0} characters'}" />
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding PlotThreadCount, StringFormat='{0} plot threads'}" />
+                                    <Label Style="{StaticResource StatusLabel}"
+                                           Text="{Binding WritingRecordCount, StringFormat='{0} days of writing history'}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Text="Delete"
+                                        VerticalOptions="Start"
+                                        Style="{StaticResource DangerButton}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DataControlsViewModel}}, Path=DeleteManuscriptCommand}"
+                                        CommandParameter="{Binding .}"
+                                        SemanticProperties.Hint="Permanently deletes this manuscript and everything in it. You will be asked to confirm." />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!--
+                Delete everything. Last on the page and visually separate, because it is the one
+                action here with no way back (FR-005, SC-008).
+            -->
+            <Border Padding="16" StrokeShape="RoundRectangle 8" Margin="0,8,0,0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource HeadingLabel}"
+                           FontSize="17"
+                           Text="Delete all app data"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <Label Text="This removes every manuscript on this device along with the key that encrypts them. Nothing will be recoverable afterwards, even from a backup — so export anything you want to keep first." />
+
+                    <Button Text="Delete everything"
+                            HorizontalOptions="Start"
+                            Style="{StaticResource DangerButton}"
+                            Command="{Binding DeleteAllCommand}"
+                            SemanticProperties.Hint="Permanently deletes all of your writing. You will be asked to confirm." />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

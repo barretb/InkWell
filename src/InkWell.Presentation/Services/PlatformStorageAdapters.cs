@@ -62,3 +62,63 @@ public sealed class MauiAppStoragePaths : IAppStoragePaths
     /// <inheritdoc />
     public string DatabaseFilePath { get; } = Path.Combine(FileSystem.AppDataDirectory, "inkwell.db3");
 }
+
+/// <summary>
+/// The platform's own "save as" and "choose folder" dialogs, via the MAUI Community Toolkit.
+/// </summary>
+/// <remarks>
+/// Deliberately thin, and deliberately the only thing in the app that can name an export
+/// destination. Every path an export writes to comes from a dialog the writer confirmed, which is
+/// what makes FR-017's "nothing leaves the device except through an explicit, user-initiated
+/// export" true of the code and not only of the intent.
+/// </remarks>
+public sealed class ToolkitFileDestinationPicker : IFileDestinationPicker
+{
+    /// <inheritdoc />
+    public async Task<string?> PickSaveLocationAsync(string suggestedFileName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(suggestedFileName);
+
+        // The toolkit's FileSaver both asks and writes, so it is handed an empty stream: the file
+        // it creates is the destination, and the exporter fills it. This keeps the "where" and the
+        // "what" in separate layers.
+        using var empty = new MemoryStream();
+        CommunityToolkit.Maui.Storage.FileSaverResult result =
+            await CommunityToolkit.Maui.Storage.FileSaver.Default
+                .SaveAsync(suggestedFileName, empty, CancellationToken.None)
+                .ConfigureAwait(false);
+
+        return result.IsSuccessful ? result.FilePath : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> PickFolderAsync()
+    {
+        CommunityToolkit.Maui.Storage.FolderPickerResult result =
+            await CommunityToolkit.Maui.Storage.FolderPicker.Default
+                .PickAsync(CancellationToken.None)
+                .ConfigureAwait(false);
+
+        return result.IsSuccessful ? result.Folder?.Path : null;
+    }
+}
+
+/// <summary>
+/// The editing-surface preference, in MAUI's <see cref="Preferences"/>.
+/// </summary>
+/// <remarks>
+/// Plain preferences rather than the encrypted database, deliberately: this is a display setting,
+/// not manuscript content, and the app has to know which editor to build before it has unlocked the
+/// cipher.
+/// </remarks>
+public sealed class MauiEditorPreferences : IEditorPreferences
+{
+    private const string UseAccessibleEditorKey = "editor.accessibility_mode";
+
+    /// <inheritdoc />
+    public bool UseAccessibleEditor
+    {
+        get => Preferences.Default.Get(UseAccessibleEditorKey, defaultValue: false);
+        set => Preferences.Default.Set(UseAccessibleEditorKey, value);
+    }
+}

@@ -1,138 +1,148 @@
+using System.Diagnostics;
+
 namespace InkWell.Presentation.Services;
 
-/// <summary>
-/// Runs an action once the writer stops changing something.
-/// </summary>
-/// <remarks>
-/// <para>
-/// InkWell has no save buttons anywhere: chapters, character notes, plot threads, and the daily
-/// goal all persist themselves (FR-004). Chapter prose gets its own coordinator because it also has
-/// to recompute word counts and touch the day's writing record transactionally. Everything else
-/// shares this: hold the latest edit, commit it once typing pauses, and always commit on the way
-/// out so navigating away can never be the thing that loses a change.
-/// </para>
-/// <para>
-/// Only the newest scheduled action survives — an older pending edit to the same field is
-/// superseded, not queued, so a fast typist causes one write rather than one per keystroke.
-/// </para>
-/// </remarks>
+/// <summary>Coalesces edits while bounding dirty time and tracking every submitted save.</summary>
 public sealed class Debouncer : IAsyncDisposable
 {
     private readonly TimeSpan _interval;
+    private readonly TimeSpan _maximumInterval;
     private readonly object _sync = new();
-
     private Func<Task>? _pending;
     private CancellationTokenSource? _timer;
+    private Task _tail = Task.CompletedTask;
+    private long _dirtySince;
+    private long _version;
     private bool _disposed;
 
-    /// <summary>Creates a debouncer.</summary>
-    /// <param name="interval">How long changes must pause before the action runs.</param>
-    public Debouncer(TimeSpan? interval = null) => _interval = interval ?? TimeSpan.FromMilliseconds(600);
+    /// <summary>Creates a debouncer with a pause interval and a maximum dirty age.</summary>
+    public Debouncer(TimeSpan? interval = null, TimeSpan? maximumInterval = null)
+    {
+        _interval = interval ?? TimeSpan.FromMilliseconds(600);
+        _maximumInterval = maximumInterval ?? TimeSpan.FromSeconds(3);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_interval, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_maximumInterval, TimeSpan.Zero);
+    }
 
-    /// <summary>Whether an edit is waiting to be written.</summary>
+    /// <summary>Whether pending or in-flight work is not yet saved.</summary>
     public bool HasPendingWork
     {
         get
         {
             lock (_sync)
             {
-                return _pending is not null;
+                return _pending is not null || !_tail.IsCompleted;
             }
         }
     }
 
-    /// <summary>Raised when a debounced action throws, so the writer can be told.</summary>
+    /// <summary>Raised when a save fails; the latest action remains available to retry.</summary>
     public event EventHandler<Exception>? Failed;
 
-    /// <summary>Replaces any pending action and restarts the pause timer.</summary>
+    /// <summary>Replaces the pending action without postponing it past the maximum interval.</summary>
     public void Schedule(Func<Task> action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
-        CancellationTokenSource cts;
         lock (_sync)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_pending is null)
+            {
+                _dirtySince = Stopwatch.GetTimestamp();
+            }
             _pending = action;
+            _version++;
             _timer?.Cancel();
-            _timer?.Dispose();
-            cts = new CancellationTokenSource();
-            _timer = cts;
+            var timer = new CancellationTokenSource();
+            _timer = timer;
+            TimeSpan remaining = _maximumInterval - Stopwatch.GetElapsedTime(_dirtySince);
+            TimeSpan delay = remaining < _interval ? remaining : _interval;
+            _ = RunTimerAsync(timer, delay > TimeSpan.Zero ? delay : TimeSpan.Zero);
         }
-
-        _ = RunAfterPauseAsync(cts.Token);
     }
 
-    /// <summary>Runs any pending action immediately.</summary>
-    public async Task FlushAsync()
+    /// <summary>Runs pending work and waits for all previously submitted actions.</summary>
+    public Task FlushAsync()
     {
-        Func<Task>? action;
         lock (_sync)
         {
             _timer?.Cancel();
-            action = _pending;
-            _pending = null;
-        }
-
-        if (action is not null)
-        {
-            await InvokeAsync(action).ConfigureAwait(false);
+            _timer = null;
+            SubmitPendingLocked();
+            return _tail;
         }
     }
 
-    private async Task RunAfterPauseAsync(CancellationToken token)
+    private async Task RunTimerAsync(CancellationTokenSource timer, TimeSpan delay)
     {
         try
         {
-            await Task.Delay(_interval, token).ConfigureAwait(false);
+            await Task.Delay(delay, timer.Token).ConfigureAwait(false);
+            lock (_sync)
+            {
+                if (_timer != timer || timer.IsCancellationRequested || _disposed)
+                {
+                    return;
+                }
+                _timer = null;
+                SubmitPendingLocked();
+            }
         }
         catch (OperationCanceledException)
         {
-            // Superseded by a newer edit or by an explicit flush; that call will run it.
-            return;
+            // A newer edit or a flush owns the pending work.
         }
-
-        Func<Task>? action;
-        lock (_sync)
+        finally
         {
-            action = _pending;
-            _pending = null;
-        }
-
-        if (action is not null)
-        {
-            await InvokeAsync(action).ConfigureAwait(false);
+            lock (_sync)
+            {
+                if (_timer == timer)
+                {
+                    _timer = null;
+                }
+                timer.Dispose();
+            }
         }
     }
 
-    private async Task InvokeAsync(Func<Task> action)
+    private void SubmitPendingLocked()
     {
-        try
-        {
-            await action().ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            // A failed background save must not vanish into a fire-and-forget task.
-            Failed?.Invoke(this, ex);
-        }
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed)
+        if (_pending is not { } action)
         {
             return;
         }
+        _pending = null;
+        long version = _version;
+        Task previous = _tail;
+        _tail = Task.Run(async () =>
+        {
+            await previous.ConfigureAwait(false);
+            try
+            {
+                await action().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                lock (_sync)
+                {
+                    if (_version == version)
+                    {
+                        _dirtySince = Stopwatch.GetTimestamp();
+                        _pending = action;
+                    }
+                }
+                Failed?.Invoke(this, ex);
+            }
+        });
+    }
 
-        _disposed = true;
-        await FlushAsync().ConfigureAwait(false);
-
+    /// <summary>Stops new edits and waits for pending and in-flight work.</summary>
+    public ValueTask DisposeAsync()
+    {
         lock (_sync)
         {
-            _timer?.Dispose();
-            _timer = null;
+            _disposed = true;
+            return new ValueTask(FlushAsync());
         }
     }
 }

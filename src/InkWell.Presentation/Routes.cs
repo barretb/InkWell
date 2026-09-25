@@ -24,9 +24,24 @@ public static class Routes
     /// <summary>Plot threads for a manuscript.</summary>
     public const string PlotThreads = "plotthreads";
 
+    /// <summary>Exporting a manuscript or chapter to EPUB or PDF.</summary>
+    public const string Export = "export";
+
+    /// <summary>Everything the app has stored, and the controls to remove it.</summary>
+    public const string DataControls = "data";
+
     /// <summary>Query parameter carrying a manuscript identifier.</summary>
     public const string ManuscriptIdParameter = "manuscriptId";
 
     /// <summary>Query parameter carrying a chapter identifier.</summary>
     public const string ChapterIdParameter = "chapterId";
+
+    /// <summary>
+    /// Query parameter carrying a manuscript's title, so the export screen can suggest a file name
+    /// without a second round trip to the store for something the caller already had.
+    /// </summary>
+    public const string ManuscriptTitleParameter = "manuscriptTitle";
+
+    /// <summary>Query parameter carrying a chapter's title, for the same reason.</summary>
+    public const string ChapterTitleParameter = "chapterTitle";
 }

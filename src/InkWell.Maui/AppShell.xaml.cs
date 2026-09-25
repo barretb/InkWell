@@ -19,5 +19,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(Routes.Goals, typeof(GoalsPage));
         Routing.RegisterRoute(Routes.Characters, typeof(CharactersPage));
         Routing.RegisterRoute(Routes.PlotThreads, typeof(PlotThreadsPage));
+        Routing.RegisterRoute(Routes.Export, typeof(ExportPage));
+        Routing.RegisterRoute(Routes.DataControls, typeof(DataControlsPage));
     }
 }

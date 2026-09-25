@@ -14,6 +14,9 @@ public interface ISqliteConnectionFactory : IAsyncDisposable
     /// <exception cref="KeyStoreUnavailableException">The cipher key could not be obtained.</exception>
     Task<SQLiteAsyncConnection> GetConnectionAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Holds the store open for an operation, excluding reset and close until disposed.</summary>
+    Task<SqliteConnectionLease> AcquireConnectionAsync(CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Flushes the write-ahead log into the main database file. Called on app suspend and close so
     /// that an un-checkpointed WAL can never look like lost work (research.md §2).
@@ -22,6 +25,9 @@ public interface ISqliteConnectionFactory : IAsyncDisposable
 
     /// <summary>Closes the connection so the database file can be deleted or replaced.</summary>
     Task CloseAsync();
+
+    /// <summary>Closes and removes the store and its sidecars before deleting its encryption key.</summary>
+    Task DeleteDatabaseAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -82,66 +88,92 @@ public sealed class SqlCipherConnectionFactory : ISqliteConnectionFactory
     /// <inheritdoc />
     public async Task<SQLiteAsyncConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
     {
+        using SqliteConnectionLease lease = await AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return lease.Connection;
+    }
+
+    /// <inheritdoc />
+    public async Task<SqliteConnectionLease> AcquireConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            SQLiteAsyncConnection connection = await OpenCoreAsync(cancellationToken).ConfigureAwait(false);
+            return new SqliteConnectionLease(connection, () => _gate.Release());
+        }
+        catch
+        {
+            _gate.Release();
+            throw;
+        }
+    }
+
+    // Caller holds _gate until its complete repository operation has finished.
+    private async Task<SQLiteAsyncConnection> OpenCoreAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (_connection is not null)
         {
             return _connection;
         }
 
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        string key = await _keyStore.GetOrCreateKeyAsync(cancellationToken).ConfigureAwait(false);
+
+        string path = _paths.DatabaseFilePath;
+        string? directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var connectionString = new SQLiteConnectionString(
+            databasePath: path,
+            openFlags: Flags,
+            storeDateTimeAsTicks: true,
+            key: key,
+            postKeyAction: connection =>
+            {
+                // Every one of these PRAGMAs may answer with a row. sqlite-net's
+                // ExecuteNonQuery treats an unexpected SQLITE_ROW as a failure ("not an
+                // error"), so they are all issued through ExecuteScalar, which is happy with
+                // either a row or none.
+                connection.ExecuteScalar<string>("PRAGMA journal_mode=WAL");
+                connection.ExecuteScalar<string>("PRAGMA synchronous=NORMAL");
+                connection.ExecuteScalar<string>("PRAGMA foreign_keys=ON");
+                connection.ExecuteScalar<string>("PRAGMA busy_timeout=5000");
+            });
+
+        var opened = new SQLiteAsyncConnection(connectionString);
         try
         {
-            if (_connection is not null)
-            {
-                return _connection;
-            }
-
-            string key = await _keyStore.GetOrCreateKeyAsync(cancellationToken).ConfigureAwait(false);
-
-            string path = _paths.DatabaseFilePath;
-            string? directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var connectionString = new SQLiteConnectionString(
-                databasePath: path,
-                openFlags: Flags,
-                storeDateTimeAsTicks: true,
-                key: key,
-                postKeyAction: connection =>
-                {
-                    // Every one of these PRAGMAs may answer with a row. sqlite-net's
-                    // ExecuteNonQuery treats an unexpected SQLITE_ROW as a failure ("not an
-                    // error"), so they are all issued through ExecuteScalar, which is happy with
-                    // either a row or none.
-                    connection.ExecuteScalar<string>("PRAGMA journal_mode=WAL");
-                    connection.ExecuteScalar<string>("PRAGMA synchronous=NORMAL");
-                    connection.ExecuteScalar<string>("PRAGMA foreign_keys=ON");
-                    connection.ExecuteScalar<string>("PRAGMA busy_timeout=5000");
-                });
-
-            var opened = new SQLiteAsyncConnection(connectionString);
             await DatabaseMigrator.MigrateAsync(opened, cancellationToken).ConfigureAwait(false);
-
-            _connection = opened;
-            return opened;
         }
-        finally
+        catch
         {
-            _gate.Release();
+            await opened.CloseAsync().ConfigureAwait(false);
+            throw;
         }
+
+        _connection = opened;
+        return opened;
     }
 
     /// <inheritdoc />
     public async Task CheckpointAsync(CancellationToken cancellationToken = default)
     {
-        if (_connection is null)
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            return;
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_connection is not null)
+            {
+                await _connection.ExecuteScalarAsync<string>("PRAGMA wal_checkpoint(TRUNCATE)").ConfigureAwait(false);
+            }
         }
-
-        await _connection.ExecuteScalarAsync<string>("PRAGMA wal_checkpoint(TRUNCATE)").ConfigureAwait(false);
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -170,15 +202,66 @@ public sealed class SqlCipherConnectionFactory : ISqliteConnectionFactory
     }
 
     /// <inheritdoc />
+    public async Task DeleteDatabaseAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
+            // Once deletion starts, finish the file/key transition without cancellation. No new
+            // connection may open with either key halfway through this operation.
+            if (_connection is not null)
+            {
+                await _connection.RunInTransactionAsync(connection =>
+                {
+                    foreach (string table in DatabaseMigrator.TableNames.Reverse())
+                    {
+                        connection.Execute($"DELETE FROM {table}");
+                    }
+                }).ConfigureAwait(false);
+                await _connection.CloseAsync().ConfigureAwait(false);
+                _connection = null;
+            }
+
+            string path = _paths.DatabaseFilePath;
+            File.Delete(path + "-wal");
+            File.Delete(path + "-shm");
+            File.Delete(path + "-journal");
+            File.Delete(path);
+            // Keep the old key if file deletion fails. Never leave a surviving encrypted file
+            // paired with a newly generated key. The next open creates a fresh database/key.
+            await _keyStore.DeleteKeyAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            return;
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        await CloseAsync().ConfigureAwait(false);
-        _disposed = true;
-        _gate.Dispose();
+            if (_connection is not null)
+            {
+                await _connection.CloseAsync().ConfigureAwait(false);
+                _connection = null;
+            }
+            _disposed = true;
+        }
+        finally
+        {
+            // Do not dispose the semaphore: queued callers must acquire it and observe _disposed,
+            // rather than race disposal or remain stuck. No semaphore wait handle is allocated.
+            _gate.Release();
+        }
     }
 }

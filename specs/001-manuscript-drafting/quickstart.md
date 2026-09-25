@@ -114,9 +114,64 @@ new day. *Automated by*: `InkWell.Domain.Tests` (counting + rollover) and `Maui.
 
 ---
 
+---
+
+## Status — 2026-09-02
+
+**Automated suite: 458 tests, 0 failing** (`dotnet test InkWell.slnx`) — 90 Domain, 60 Application,
+148 Infrastructure, 160 UI/story. Every scenario above that a machine can decide is covered by one
+of them; the rest are listed as outstanding rather than assumed.
+
+### Verified automatically
+
+| Scenario | Covered by |
+|---|---|
+| US1 steps 1–5 | `Maui.UiTests/UserStory1Tests.cs`, `Infrastructure.Tests/Persistence/ManuscriptRepositoryTests.cs` |
+| US1 keyboard-only completion, including reorder | `Maui.UiTests/Accessibility/UserStory1AccessibilityTests.cs` |
+| US2 all steps | `Maui.UiTests/UserStory2Tests.cs`, `DistractionFreeBridgeTests.cs`, `Performance/DistractionFreePerformanceTests.cs` |
+| US3 all steps, including day rollover past local midnight | `Maui.UiTests/UserStory3Tests.cs`, `Domain.Tests/Services/DailyProgressCalculatorTests.cs` |
+| US4 all steps | `Maui.UiTests/UserStory4Tests.cs`, `Infrastructure.Tests/Persistence/ReferenceRepositoryTests.cs` |
+| Export: EPUB + PDF, whole manuscript and single chapter, images embedded | `Infrastructure.Tests/Export/EpubExporterTests.cs`, `PdfExporterTests.cs` |
+| **EPUBCheck clean** | `Infrastructure.Tests/Export/EpubCheckTests.cs` — verified against EPUBCheck 5.3.0 with `--failonwarnings`, zero errors (research.md §5.7) |
+| No plaintext in the database, no network permission on any platform | `Infrastructure.Tests/Privacy/DraftingPrivacyTests.cs`, `PlatformPrivacyManifestTests.cs`, `ExportPrivacyTests.cs` |
+| Data controls: view all, delete one, delete everything with nothing recoverable | `Infrastructure.Tests/Persistence/DataControlsTests.cs`, `Maui.UiTests/ExportAndDataControlsTests.cs` |
+| WCAG 2.1 AA contrast, computed over the shipping palette | `Maui.UiTests/Accessibility/UserStory1AccessibilityTests.cs` |
+| No status conveyed by colour alone | The accessibility tests for US1–US4 |
+| SC-004 at 150,104 words across 52 chapters | `Maui.UiTests/Performance/LargeManuscriptPerformanceTests.cs` |
+| No blocking I/O on the UI thread | `Maui.UiTests/Performance/UiThreadDisciplineTests.cs` |
+
+Measured on the desktop target: 0.009 ms per keystroke against a 16 ms frame budget, a chapter
+opening from a 150,000-word manuscript in under a millisecond, and an autosave commit in under a
+millisecond.
+
+### Outstanding — needs a device or a person
+
+These cannot be settled on a Windows build host and are **not** claimed as passing:
+
+- **US1 step 6 and the privacy network monitor** — running the app with networking disabled and
+  watching for egress. The manifest-level assertion (the app holds no network permission on any
+  platform) is automated and is the stronger guarantee, but the observed run has not been done.
+- **Screen-reader verification** — Narrator, VoiceOver, and TalkBack against the editor's
+  `contenteditable` surface and the native accessibility-mode fallback. This is the risk
+  research.md §1 names as the highest, and it is the reason the fallback exists. Tasks T071, T082,
+  T096, T106, T130.
+- **The mobile half of the performance criterion** — SC-004 asks for at least one desktop and one
+  mobile target; only desktop has been measured.
+- **SQLCipher and `HybridWebView` on Apple and Android** — tasks T012 and T013, still open
+  (research.md §5.1, §5.2).
+- **PDFsharp font rendering on a real iOS and Android device** — task T107. The resolver is verified
+  on Windows and the font program is genuinely embedded in the output (research.md §5.8); whether
+  the device rasterisers accept it is untested.
+- **Cross-platform WebView QA** — `contenteditable`, IME, and paste across WebView2, WKWebView, and
+  Android WebView. Task T129.
+
 ## Definition of done for this feature
 
-- [ ] All four validation scenarios (US1–US4) pass manually and via automated tests.
-- [ ] Cross-cutting export/privacy/accessibility scenarios pass; EPUBCheck clean; no plaintext in DB.
-- [ ] Performance scenario meets SC-004/SC-006 on at least one desktop and one mobile target.
-- [ ] Constitution gates in [plan.md](./plan.md) remain satisfied.
+- [X] All four validation scenarios (US1–US4) pass via automated tests. *Manual passes on a device
+  remain outstanding, as listed above.*
+- [X] Cross-cutting export/privacy scenarios pass; **EPUBCheck clean**; no plaintext in DB.
+- [ ] Accessibility: contrast and keyboard-only completion are verified automatically; screen-reader
+  verification on a device is outstanding.
+- [ ] Performance scenario meets SC-004/SC-006 on at least one desktop **and one mobile** target —
+  desktop done, mobile outstanding.
+- [X] Constitution gates in [plan.md](./plan.md) remain satisfied.

@@ -64,6 +64,15 @@ public sealed class KeyedDatabaseFixture : IAsyncDisposable
     /// <summary>The key store backing this database.</summary>
     public IKeyStore KeyStore { get; private set; }
 
+    /// <summary>
+    /// The secure storage the key lives in, so a test can see whether the key is still there.
+    /// </summary>
+    /// <remarks>
+    /// SC-008 turns on the key being gone, and the only honest way to check that is to look in the
+    /// store rather than to add a "was it deleted?" method to production code for a test's benefit.
+    /// </remarks>
+    public InMemorySecureStore SecureStore => _secureStore;
+
     /// <summary>The connection factory under test.</summary>
     public ISqliteConnectionFactory Factory => _factory;
 

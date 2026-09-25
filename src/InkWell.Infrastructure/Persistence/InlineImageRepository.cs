@@ -47,7 +47,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
                 $"An inline image may be at most {MaxImageBytes / (1024 * 1024)} MB.", nameof(insert));
         }
 
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         var id = Guid.NewGuid();
         await connection.ExecuteAsync(
@@ -66,7 +67,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
     /// <inheritdoc />
     public async Task<InlineImage?> GetAsync(Guid imageId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<InlineImageRow> rows = await connection
             .QueryAsync<InlineImageRow>("SELECT * FROM InlineImage WHERE Id = ?", imageId.ToString())
             .ConfigureAwait(false);
@@ -79,7 +81,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
         Guid chapterId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<InlineImageRow> rows = await connection
             .QueryAsync<InlineImageRow>(
                 "SELECT * FROM InlineImage WHERE ChapterId = ? ORDER BY CreatedAt", chapterId.ToString())
@@ -94,7 +97,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
         Guid chapterId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<InlineImageRow> rows = await connection
             .QueryAsync<InlineImageRow>(
                 "SELECT * FROM InlineImage WHERE ChapterId = ? ORDER BY CreatedAt", chapterId.ToString())
@@ -106,7 +110,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
     /// <inheritdoc />
     public async Task<bool> SetAltTextAsync(Guid imageId, string? altText, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         int affected = await connection.ExecuteAsync(
             "UPDATE InlineImage SET AltText = ? WHERE Id = ?", altText, imageId.ToString()).ConfigureAwait(false);
 
@@ -118,7 +123,8 @@ public sealed class InlineImageRepository : IInlineImageRepository
         Guid manuscriptId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<string> ids = await connection.QueryScalarsAsync<string>(
             """
             SELECT i.Id

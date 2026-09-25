@@ -20,4 +20,19 @@
     <PackageReference Include="PDFsharp-MigraDoc" />
   </ItemGroup>
 
+  <!--
+    The PDF exporter's fonts, embedded in this assembly rather than shipped as app resources.
+
+    PDFsharp's Core build has no system font access, so on iOS and Android it renders nothing at all
+    unless a font resolver hands it real bytes (research.md §3, the highest export risk). An
+    embedded resource is the only source that is guaranteed present on every target: it needs no
+    file system, no MAUI asset pipeline, and survives iOS AOT.
+
+    They live here, next to the exporter that needs them, and `InkWell.Maui` links them back for its
+    own UI typography — the app depends on infrastructure, never the reverse.
+  -->
+  <ItemGroup Label="Bundled export fonts">
+    <EmbeddedResource Include="Export\Fonts\*.ttf" />
+  </ItemGroup>
+
 </Project>

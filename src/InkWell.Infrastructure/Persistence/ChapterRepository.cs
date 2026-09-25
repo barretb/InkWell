@@ -28,7 +28,8 @@ public sealed class ChapterRepository : IChapterRepository
         Guid manuscriptId,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<ManuscriptRepository.ChapterSummaryRow> rows = await connection
             .QueryAsync<ManuscriptRepository.ChapterSummaryRow>(
                 "SELECT Id, Title, OrderIndex, WordCount FROM Chapter WHERE ManuscriptId = ? ORDER BY OrderIndex",
@@ -41,7 +42,8 @@ public sealed class ChapterRepository : IChapterRepository
     /// <inheritdoc />
     public async Task<Chapter?> GetAsync(Guid chapterId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         List<ChapterRow> rows = await connection
             .QueryAsync<ChapterRow>("SELECT * FROM Chapter WHERE Id = ?", chapterId.ToString())
             .ConfigureAwait(false);
@@ -74,7 +76,8 @@ public sealed class ChapterRepository : IChapterRepository
     public async Task AddAsync(Chapter chapter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chapter);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         await connection.InsertAsync(ChapterRow.FromEntity(chapter)).ConfigureAwait(false);
     }
 
@@ -85,7 +88,8 @@ public sealed class ChapterRepository : IChapterRepository
         DateTimeOffset modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         long ticks = RowConversions.ToTicks(modifiedAt);
 
         var affected = 0;
@@ -114,7 +118,8 @@ public sealed class ChapterRepository : IChapterRepository
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(assignments);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         long ticks = RowConversions.ToTicks(modifiedAt);
 
         // One transaction, so the manuscript is never observable with two chapters claiming the
@@ -138,7 +143,8 @@ public sealed class ChapterRepository : IChapterRepository
         DateTimeOffset modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         long ticks = RowConversions.ToTicks(modifiedAt);
         var deleted = false;
 
@@ -181,7 +187,8 @@ public sealed class ChapterRepository : IChapterRepository
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(commit);
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
 
         AutoSaveResult? result = null;
 
@@ -284,7 +291,8 @@ public sealed class ChapterRepository : IChapterRepository
     /// <inheritdoc />
     public async Task<int> GetManuscriptWordCountAsync(Guid manuscriptId, CancellationToken cancellationToken = default)
     {
-        SQLiteAsyncConnection connection = await _factory.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using SqliteConnectionLease lease = await _factory.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
+        SQLiteAsyncConnection connection = lease.Connection;
         return await connection.ExecuteScalarAsync<int>(
             "SELECT COALESCE(SUM(WordCount), 0) FROM Chapter WHERE ManuscriptId = ?",
             manuscriptId.ToString()).ConfigureAwait(false);
