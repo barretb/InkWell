@@ -338,4 +338,3 @@ Two things are deliberately recorded as not settled:
 The fonts moved from `src/InkWell.Maui/Resources/Fonts/` to `src/InkWell.Infrastructure/Export/Fonts/`
 and are embedded there; the app project links them back for its own `MauiFont` typography. The
 dependency points inward, and there is one copy of each file.
-
